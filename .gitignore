@@ -1,0 +1,18 @@
+
+# Environnement virtuel Python
+venv/
+__pycache__/
+*.pyc
+
+# Base de données locale
+db.sqlite3
+
+# Fichiers secrets (clés API, mots de passe...)
+.env
+
+# Frontend Vue
+node_modules/
+dist/
+
+# macOS
+.DS_Store
