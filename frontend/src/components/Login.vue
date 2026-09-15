@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { authToken, login, logout } from '../auth'
+import { login } from '../auth'
 
 const username = ref('')
 const password = ref('')
@@ -19,12 +19,7 @@ async function handleLogin() {
 <template>
   <div class="page">
     <div class="card">
-      <div v-if="authToken" class="connected">
-        <p class="connected-msg">Connecté.</p>
-        <button class="btn btn-secondary" @click="logout">Se déconnecter</button>
-      </div>
-
-      <form v-else @submit.prevent="handleLogin">
+      <form @submit.prevent="handleLogin">
         <p class="eyebrow">Centre de contrôle</p>
         <h1>Connexion</h1>
 
@@ -125,27 +120,10 @@ input:focus {
   background: #0a4f48;
 }
 
-.btn-secondary {
-  width: auto;
-  background: #ffffff;
-  color: #0f6d63;
-  border: 1px solid #0f6d63;
-}
-
-.btn-secondary:hover {
-  background: #e5eff5;
-}
-
 .error {
   margin-top: 14px;
   margin-bottom: 0;
   color: #a85a17;
   font-size: 0.88rem;
-}
-
-.connected-msg {
-  font-size: 1.1rem;
-  color: #14201e;
-  margin-bottom: 16px;
 }
 </style>
