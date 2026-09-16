@@ -26,6 +26,10 @@ class Tool(models.Model):
     base_command = models.CharField(max_length=100, help_text="Ex : nmap")
     phase = models.CharField(max_length=10, choices=PHASE_CHOICES)
     target_field = models.CharField(max_length=10, choices=TARGET_FIELD_CHOICES, default='address')
+    target_flag = models.CharField(
+        max_length=20, blank=True,
+        help_text="Si la cible doit être précédée d'un flag (ex : -d), sinon elle est ajoutée telle quelle à la fin",
+    )
     description = models.TextField(blank=True)
 
     def __str__(self):

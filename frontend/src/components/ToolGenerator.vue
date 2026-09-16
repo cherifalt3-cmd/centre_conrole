@@ -209,7 +209,9 @@ const generatedCommand = computed(() => {
 
   const target = selectedTool.value.target_field === 'domain' ? domain.value : address.value
   if (target) {
-    parts.push(target)
+    parts.push(
+      selectedTool.value.target_flag ? formatFreeValue(selectedTool.value.target_flag, target) : target,
+    )
   }
 
   return parts.join(' ')
