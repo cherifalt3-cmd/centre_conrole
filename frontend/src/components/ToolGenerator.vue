@@ -5,6 +5,7 @@ import { authToken } from '../auth'
 const tools = ref([])
 const presets = ref([])
 const activeCategory = ref(null)
+const activeMetasploitService = ref(null)
 const activeTab = ref('suggestions')
 const phase = ref(null)
 const selectedToolId = ref('')
@@ -75,6 +76,7 @@ const CATEGORY_CLASSES = {
   SQL: 'badge-sql',
   Général: 'badge-general',
   'DNS / OSINT': 'badge-dns',
+  Metasploit: 'badge-metasploit',
 }
 
 function categoryClass(category) {
@@ -82,16 +84,37 @@ function categoryClass(category) {
 }
 
 // Liste des catégories présentes dans les suggestions, dans un ordre fixe et lisible
-const CATEGORY_ORDER = ['Général', 'DNS / OSINT', 'SMB', 'FTP', 'SSH', 'HTTP', 'SMTP', 'SQL']
+const CATEGORY_ORDER = ['Général', 'DNS / OSINT', 'SMB', 'FTP', 'SSH', 'HTTP', 'SMTP', 'SQL', 'Metasploit']
 
 const categories = computed(() => {
   const present = new Set(presets.value.map((p) => p.category).filter(Boolean))
   return CATEGORY_ORDER.filter((c) => present.has(c))
 })
 
+// Pour Metasploit, le service (HTTP, FTP...) est déduit du préfixe du libellé ("HTTP — Version du serveur")
+function presetService(preset) {
+  return preset.label.includes(' — ') ? preset.label.split(' — ')[0] : null
+}
+
+const metasploitServices = computed(() => {
+  const present = new Set(
+    presets.value.filter((p) => p.category === 'Metasploit').map((p) => presetService(p)).filter(Boolean),
+  )
+  return [...present]
+})
+
 const filteredPresets = computed(() => {
-  if (!activeCategory.value) return presets.value
-  return presets.value.filter((p) => p.category === activeCategory.value)
+  let list = presets.value
+
+  if (activeCategory.value) {
+    list = list.filter((p) => p.category === activeCategory.value)
+  }
+
+  if (activeCategory.value === 'Metasploit' && activeMetasploitService.value) {
+    list = list.filter((p) => presetService(p) === activeMetasploitService.value)
+  }
+
+  return list
 })
 
 // Découpe une commande en mots colorables : commande de base / flags / adresse cible
@@ -276,7 +299,7 @@ watch(generatedCommand, (cmd) => {
             <button
               type="button"
               :class="['filter-btn', { active: activeCategory === null }]"
-              @click="activeCategory = null"
+              @click="activeCategory = null; activeMetasploitService = null"
             >
               Tous
             </button>
@@ -285,11 +308,31 @@ watch(generatedCommand, (cmd) => {
               :key="category"
               type="button"
               :class="['filter-btn', { active: activeCategory === category }]"
-              @click="activeCategory = category"
+              @click="activeCategory = category; activeMetasploitService = null"
             >
               {{ category }}
             </button>
           </div>
+
+          <div v-if="activeCategory === 'Metasploit'" class="category-filters sub-filters">
+            <button
+              type="button"
+              :class="['filter-btn', 'filter-btn-sub', { active: activeMetasploitService === null }]"
+              @click="activeMetasploitService = null"
+            >
+              Tous services
+            </button>
+            <button
+              v-for="service in metasploitServices"
+              :key="service"
+              type="button"
+              :class="['filter-btn', 'filter-btn-sub', { active: activeMetasploitService === service }]"
+              @click="activeMetasploitService = service"
+            >
+              {{ service }}
+            </button>
+          </div>
+
           <div class="preset-grid-wrap">
             <div class="preset-grid">
               <button
@@ -656,6 +699,22 @@ watch(generatedCommand, (cmd) => {
   color: #fff;
 }
 
+.sub-filters {
+  margin: -4px 0 12px 4px;
+}
+
+.filter-btn-sub {
+  padding: 3px 10px;
+  font-size: 0.74rem;
+  border-color: #e5eaea;
+  color: #8a9895;
+}
+
+.filter-btn-sub.active {
+  background: #3d3d8f;
+  border-color: #3d3d8f;
+}
+
 .preset-grid-wrap {
   max-height: 400px;
   overflow-y: auto;
@@ -741,6 +800,11 @@ watch(generatedCommand, (cmd) => {
 .badge-dns {
   background: #e6f0e9;
   color: #2f7d54;
+}
+
+.badge-metasploit {
+  background: #e6e6f7;
+  color: #3d3d8f;
 }
 
 .preset-label {
