@@ -17,9 +17,15 @@ class Tool(models.Model):
         ('active', 'Active'),
     ]
 
+    TARGET_FIELD_CHOICES = [
+        ('address', 'Adresse (IP)'),
+        ('domain', 'Nom de domaine'),
+    ]
+
     name = models.CharField(max_length=100)
     base_command = models.CharField(max_length=100, help_text="Ex : nmap")
     phase = models.CharField(max_length=10, choices=PHASE_CHOICES)
+    target_field = models.CharField(max_length=10, choices=TARGET_FIELD_CHOICES, default='address')
     description = models.TextField(blank=True)
 
     def __str__(self):

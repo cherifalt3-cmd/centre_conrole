@@ -11,6 +11,7 @@ const selectedToolId = ref('')
 const toolSearch = ref('')
 const openToolDropdown = ref(false)
 const address = ref('')
+const domain = ref('')
 const optionValues = reactive({})
 
 const customCommand = ref('')
@@ -59,7 +60,9 @@ onMounted(() => {
 })
 
 function applyPreset(preset) {
-  customCommand.value = preset.template.replaceAll('{address}', address.value || '<adresse>')
+  customCommand.value = preset.template
+    .replaceAll('{address}', address.value || '<adresse>')
+    .replaceAll('{domain}', domain.value || '<domaine>')
   presetCopied.value = false
 }
 
@@ -71,6 +74,7 @@ const CATEGORY_CLASSES = {
   SMTP: 'badge-smtp',
   SQL: 'badge-sql',
   Général: 'badge-general',
+  'DNS / OSINT': 'badge-dns',
 }
 
 function categoryClass(category) {
@@ -78,7 +82,7 @@ function categoryClass(category) {
 }
 
 // Liste des catégories présentes dans les suggestions, dans un ordre fixe et lisible
-const CATEGORY_ORDER = ['Général', 'SMB', 'FTP', 'SSH', 'HTTP', 'SMTP', 'SQL']
+const CATEGORY_ORDER = ['Général', 'DNS / OSINT', 'SMB', 'FTP', 'SSH', 'HTTP', 'SMTP', 'SQL']
 
 const categories = computed(() => {
   const present = new Set(presets.value.map((p) => p.category).filter(Boolean))
@@ -180,7 +184,8 @@ watch(selectedTool, (tool) => {
 
 function formatFreeValue(flag, value) {
   if (!flag) return value
-  return flag.endsWith('=') ? `${flag}${value}` : `${flag} ${value}`
+  // Certains flags se collent directement à la valeur (--script=, @serveur), d'autres ont besoin d'un espace (-p, -h)
+  return /[=@]$/.test(flag) ? `${flag}${value}` : `${flag} ${value}`
 }
 
 const generatedCommand = computed(() => {
@@ -202,8 +207,9 @@ const generatedCommand = computed(() => {
     }
   }
 
-  if (address.value) {
-    parts.push(address.value)
+  const target = selectedTool.value.target_field === 'domain' ? domain.value : address.value
+  if (target) {
+    parts.push(target)
   }
 
   return parts.join(' ')
@@ -236,8 +242,16 @@ watch(generatedCommand, (cmd) => {
     </div>
 
     <div class="top-panel">
-      <label class="step-label">Adresse de la cible</label>
-      <input v-model="address" type="text" class="address-input" placeholder="Ex : 192.168.1.10" />
+      <div class="target-fields">
+        <div>
+          <label class="step-label">Adresse de la cible</label>
+          <input v-model="address" type="text" class="address-input" placeholder="Ex : 192.168.1.10" />
+        </div>
+        <div>
+          <label class="step-label">Nom de domaine</label>
+          <input v-model="domain" type="text" class="address-input" placeholder="Ex : exemple.com" />
+        </div>
+      </div>
 
       <div class="result sticky-result">
         <label class="step-label">Commande (modifiable)</label>
@@ -533,6 +547,18 @@ watch(generatedCommand, (cmd) => {
   margin-bottom: 20px;
 }
 
+.target-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .target-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 .tabbed-area {
   display: flex;
   gap: 16px;
@@ -708,6 +734,11 @@ watch(generatedCommand, (cmd) => {
 .badge-default {
   background: #eef2f1;
   color: #5b6b68;
+}
+
+.badge-dns {
+  background: #e6f0e9;
+  color: #2f7d54;
 }
 
 .preset-label {

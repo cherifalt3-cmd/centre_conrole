@@ -17,8 +17,8 @@ class ToolOptionInline(admin.TabularInline):
 
 @admin.register(Tool)
 class ToolAdmin(admin.ModelAdmin):
-    list_display = ('name', 'base_command', 'phase')
-    list_filter = ('phase',)
+    list_display = ('name', 'base_command', 'phase', 'target_field')
+    list_filter = ('phase', 'target_field')
     inlines = [ToolOptionInline]
 
 

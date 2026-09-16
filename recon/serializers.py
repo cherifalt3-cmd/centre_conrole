@@ -44,7 +44,7 @@ class ToolSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tool
-        fields = ['id', 'name', 'base_command', 'phase', 'description', 'options']
+        fields = ['id', 'name', 'base_command', 'phase', 'target_field', 'description', 'options']
 
 
 class CommandPresetSerializer(serializers.ModelSerializer):
