@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Target, Tool, ToolOption, ToolOptionChoice, Catalog, CatalogEntry
+from .models import (
+    Target, Tool, ToolOption, ToolOptionChoice, Catalog, CatalogEntry, CommandPreset,
+)
 
 
 class TargetSerializer(serializers.ModelSerializer):
@@ -34,7 +36,7 @@ class ToolOptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ToolOption
-        fields = ['id', 'label', 'flag', 'option_type', 'help_text', 'choices', 'catalog']
+        fields = ['id', 'label', 'group', 'flag', 'option_type', 'help_text', 'choices', 'catalog']
 
 
 class ToolSerializer(serializers.ModelSerializer):
@@ -43,3 +45,9 @@ class ToolSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tool
         fields = ['id', 'name', 'base_command', 'phase', 'description', 'options']
+
+
+class CommandPresetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommandPreset
+        fields = ['id', 'label', 'category', 'phase', 'template', 'order']

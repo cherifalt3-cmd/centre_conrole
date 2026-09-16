@@ -53,6 +53,7 @@ class ToolOption(models.Model):
 
     tool = models.ForeignKey(Tool, related_name='options', on_delete=models.CASCADE)
     label = models.CharField(max_length=100, help_text="Nom affiché, ex : Détection de version")
+    group = models.CharField(max_length=50, blank=True, help_text="Ex : Détection, Scan, Performance...")
     flag = models.CharField(
         max_length=50, blank=True,
         help_text="Ex : -sV ou --script= (laisser vide si chaque choix a son propre flag)",
@@ -77,6 +78,24 @@ class ToolOptionChoice(models.Model):
     option = models.ForeignKey(ToolOption, related_name='choices', on_delete=models.CASCADE)
     value = models.CharField(max_length=100, help_text="Ex : -sS")
     label = models.CharField(max_length=150, help_text="Ex : TCP SYN scan")
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.label
+
+
+class CommandPreset(models.Model):
+    """Une commande toute prête, proposée en haut du générateur (ex : Scan rapide)."""
+    label = models.CharField(max_length=150, help_text="Ex : Scan rapide")
+    category = models.CharField(max_length=50, blank=True, help_text="Ex : SMB, FTP, SSH, Général...")
+    phase = models.CharField(max_length=10, choices=Tool.PHASE_CHOICES)
+    template = models.CharField(
+        max_length=255,
+        help_text="Utilise {address} pour représenter la cible, ex : nmap -F {address}",
+    )
     order = models.PositiveIntegerField(default=0)
 
     class Meta:

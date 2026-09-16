@@ -48,14 +48,13 @@ async function handleLogin() {
   align-items: center;
   justify-content: center;
   background: #eef2f1;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .card {
   background: #ffffff;
   border: 1px solid #d7e0de;
   border-radius: 14px;
-  box-shadow: 0 6px 20px rgba(20, 32, 30, 0.08);
+  box-shadow: 0 1px 2px rgba(20, 32, 30, 0.06), 0 8px 28px rgba(20, 32, 30, 0.07);
   padding: 36px 34px;
   width: 100%;
   max-width: 360px;
@@ -95,6 +94,7 @@ input {
   border-radius: 8px;
   font-size: 0.95rem;
   box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 input:focus {
@@ -114,6 +114,7 @@ input:focus {
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .btn:hover {

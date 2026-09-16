@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    Target, Tool, ToolOption, ToolOptionChoice, Catalog, CatalogEntry,
+    Target, Tool, ToolOption, ToolOptionChoice, Catalog, CatalogEntry, CommandPreset,
 )
 
 
@@ -29,8 +29,8 @@ class ToolOptionChoiceInline(admin.TabularInline):
 
 @admin.register(ToolOption)
 class ToolOptionAdmin(admin.ModelAdmin):
-    list_display = ('label', 'tool', 'option_type', 'flag')
-    list_filter = ('tool', 'option_type')
+    list_display = ('label', 'tool', 'group', 'option_type', 'flag')
+    list_filter = ('tool', 'group', 'option_type')
     inlines = [ToolOptionChoiceInline]
 
 
@@ -43,3 +43,9 @@ class CatalogEntryInline(admin.TabularInline):
 class CatalogAdmin(admin.ModelAdmin):
     list_display = ('name',)
     inlines = [CatalogEntryInline]
+
+
+@admin.register(CommandPreset)
+class CommandPresetAdmin(admin.ModelAdmin):
+    list_display = ('label', 'category', 'phase', 'template', 'order')
+    list_filter = ('category', 'phase')

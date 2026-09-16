@@ -56,7 +56,7 @@ onMounted(fetchTargets)
   <div class="targets">
     <h2>Carnet de cibles</h2>
 
-    <form class="add-form" @submit.prevent="addTarget">
+    <form class="add-form card" @submit.prevent="addTarget">
       <input v-model="newName" type="text" placeholder="Nom (facultatif)" />
       <input v-model="newAddress" type="text" placeholder="Adresse (IP ou domaine)" required />
       <input v-model="newNotes" type="text" placeholder="Notes (facultatif)" />
@@ -80,19 +80,31 @@ onMounted(fetchTargets)
 
 <style scoped>
 .targets {
-  max-width: 640px;
+  max-width: 720px;
   margin: 0 auto;
 }
 
 h2 {
-  margin: 0 0 20px;
+  text-align: center;
+  margin: 0 0 40px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2.1rem;
+  font-weight: 700;
   color: #14201e;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #d7e0de;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(20, 32, 30, 0.05), 0 6px 18px rgba(20, 32, 30, 0.05);
 }
 
 .add-form {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  padding: 16px;
   margin-bottom: 24px;
 }
 
@@ -103,6 +115,13 @@ h2 {
   border: 1px solid #c3d0cd;
   border-radius: 8px;
   font-size: 0.9rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.add-form input:focus {
+  outline: none;
+  border-color: #0f6d63;
+  box-shadow: 0 0 0 3px rgba(15, 109, 99, 0.15);
 }
 
 .add-form button {
@@ -113,6 +132,7 @@ h2 {
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .add-form button:hover {
@@ -139,6 +159,13 @@ h2 {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+  box-shadow: 0 1px 2px rgba(20, 32, 30, 0.04);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.target-list li:hover {
+  border-color: #c3d0cd;
+  box-shadow: 0 4px 14px rgba(20, 32, 30, 0.06);
 }
 
 .notes {
@@ -156,6 +183,7 @@ h2 {
   font-size: 0.8rem;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.15s ease;
 }
 
 .delete-btn:hover {
