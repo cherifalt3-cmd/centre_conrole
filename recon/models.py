@@ -53,7 +53,10 @@ class ToolOption(models.Model):
 
     tool = models.ForeignKey(Tool, related_name='options', on_delete=models.CASCADE)
     label = models.CharField(max_length=100, help_text="Nom affiché, ex : Détection de version")
-    flag = models.CharField(max_length=50, help_text="Ex : -sV ou --script=")
+    flag = models.CharField(
+        max_length=50, blank=True,
+        help_text="Ex : -sV ou --script= (laisser vide si chaque choix a son propre flag)",
+    )
     option_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     help_text = models.CharField(max_length=255, blank=True)
     catalog = models.ForeignKey(
