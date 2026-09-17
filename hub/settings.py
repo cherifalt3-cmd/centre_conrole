@@ -10,10 +10,18 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Charge les variables du fichier .env (clés API, secrets...) dans les variables d'environnement
+load_dotenv(BASE_DIR / '.env')
+
+SCRAPY_CLOUD_API_KEY = os.environ.get('SCRAPY_CLOUD_API_KEY', '')
+SCRAPY_CLOUD_PROJECT_ID = os.environ.get('SCRAPY_CLOUD_PROJECT_ID', '')
 
 
 # Quick-start development settings - unsuitable for production

@@ -16,3 +16,6 @@ dist/
 
 # macOS
 .DS_Store
+
+# Cache local Scrapy
+.scrapy/
