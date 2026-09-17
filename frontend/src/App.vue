@@ -4,6 +4,8 @@ import Login from './components/Login.vue'
 import Dashboard from './components/Dashboard.vue'
 import TargetList from './components/TargetList.vue'
 import ToolGenerator from './components/ToolGenerator.vue'
+import Veille from './components/Veille.vue'
+import Kanban from './components/Kanban.vue'
 import { authToken, logout } from './auth'
 
 const currentView = ref('dashboard')
@@ -76,6 +78,33 @@ watch(sidebarVisible, (value) => {
             <line x1="12" y1="15" x2="17" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
           <span class="sidebar-label">Générateur de commandes</span>
+        </button>
+        <button
+          type="button"
+          :class="['sidebar-link', { active: currentView === 'veille' }]"
+          :title="!sidebarVisible ? 'Veille cybersécu & IA' : null"
+          @click="currentView = 'veille'"
+        >
+          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="4" width="18" height="16" rx="1" stroke="currentColor" stroke-width="2" />
+            <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2" />
+            <line x1="7" y1="13" x2="15" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <line x1="7" y1="17" x2="12" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          <span class="sidebar-label">Veille cybersécu &amp; IA</span>
+        </button>
+        <button
+          type="button"
+          :class="['sidebar-link', { active: currentView === 'kanban' }]"
+          :title="!sidebarVisible ? 'Kanban projets' : null"
+          @click="currentView = 'kanban'"
+        >
+          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="4" width="18" height="16" rx="1" stroke="currentColor" stroke-width="2" />
+            <line x1="9" y1="4" x2="9" y2="20" stroke="currentColor" stroke-width="2" />
+            <line x1="15" y1="4" x2="15" y2="20" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span class="sidebar-label">Kanban projets</span>
         </button>
       </nav>
 
@@ -195,6 +224,8 @@ watch(sidebarVisible, (value) => {
         <Dashboard v-if="currentView === 'dashboard'" @navigate="currentView = $event" />
         <TargetList v-else-if="currentView === 'targets'" />
         <ToolGenerator v-else-if="currentView === 'generator'" />
+        <Veille v-else-if="currentView === 'veille'" />
+        <Kanban v-else-if="currentView === 'kanban'" />
       </main>
       <footer class="app-footer">Centre de contrôle — usage local</footer>
     </div>

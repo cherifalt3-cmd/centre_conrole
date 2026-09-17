@@ -1,11 +1,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { authToken } from '../auth'
+import Kanban from './Kanban.vue'
 
 const emit = defineEmits(['navigate'])
 
 const targets = ref([])
 const loaded = ref(false)
+
+const articles = ref([])
+const articlesLoaded = ref(false)
+
+const kanbanBoard = ref(null)
+const kanbanLoaded = ref(false)
 
 async function fetchTargets() {
   const response = await fetch('http://127.0.0.1:8000/api/recon/targets/', {
@@ -15,16 +22,69 @@ async function fetchTargets() {
   loaded.value = true
 }
 
-onMounted(fetchTargets)
+async function fetchArticles() {
+  const response = await fetch('http://127.0.0.1:8000/api/veille/articles/', {
+    headers: { Authorization: `Token ${authToken.value}` },
+  })
+  articles.value = await response.json()
+  articlesLoaded.value = true
+}
+
+async function fetchKanban() {
+  const response = await fetch('http://127.0.0.1:8000/api/kanban/boards/', {
+    headers: { Authorization: `Token ${authToken.value}` },
+  })
+  const boards = await response.json()
+  kanbanBoard.value = boards.length ? boards[0] : null
+  kanbanLoaded.value = true
+}
+
+onMounted(() => {
+  fetchTargets()
+  fetchArticles()
+  fetchKanban()
+})
 
 const targetCount = computed(() => targets.value.length)
 const lastTarget = computed(() => (targets.value.length ? targets.value[0] : null))
+
+const articleCount = computed(() => articles.value.length)
+const lastArticle = computed(() => (articles.value.length ? articles.value[0] : null))
+const criticalCount = computed(() => articles.value.filter((a) => a.severity === 'critical').length)
+
+const kanbanCardCount = computed(() => {
+  if (!kanbanBoard.value) return 0
+  return kanbanBoard.value.columns.reduce((sum, col) => sum + col.cards.length, 0)
+})
+
+const kanbanInProgressCount = computed(() => {
+  if (!kanbanBoard.value) return 0
+  const col = kanbanBoard.value.columns.find((c) => c.name === 'En cours')
+  return col ? col.cards.length : 0
+})
 </script>
 
 <template>
   <div class="dashboard">
-    <h2>Bienvenue</h2>
+    <div class="terminal-title">
+      <div class="terminal-window">
+        <div class="terminal-bar">
+          <span class="dot dot-red"></span>
+          <span class="dot dot-yellow"></span>
+          <span class="dot dot-green"></span>
+          <span class="terminal-bar-title">bash — centre-controle</span>
+        </div>
+        <p class="terminal-line">
+          <span class="prompt-user">pro@centre-controle</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-sep">$</span>
+          Bienvenue<span class="cursor">_</span>
+        </p>
+      </div>
+    </div>
     <p class="subtitle">Vue d'ensemble de tes modules</p>
+
+    <div class="dashboard-section dashboard-section-top">
+      <Kanban />
+    </div>
 
     <div class="tile-grid">
       <button type="button" class="tile tile-active" @click="emit('navigate', 'targets')">
@@ -70,7 +130,7 @@ const lastTarget = computed(() => (targets.value.length ? targets.value[0] : nul
         <p class="tile-soon-badge">Bientôt disponible</p>
       </div>
 
-      <div class="tile tile-soon">
+      <button type="button" class="tile tile-active" @click="emit('navigate', 'veille')">
         <div class="tile-head">
           <svg class="tile-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="3" y="4" width="18" height="16" rx="1" stroke="currentColor" stroke-width="2" />
@@ -80,10 +140,18 @@ const lastTarget = computed(() => (targets.value.length ? targets.value[0] : nul
           </svg>
           <span class="tile-title">Veille cybersécu &amp; IA</span>
         </div>
-        <p class="tile-soon-badge">Bientôt disponible</p>
-      </div>
+        <p v-if="articlesLoaded" class="tile-stat">
+          <strong>{{ articleCount }}</strong> article{{ articleCount === 1 ? '' : 's' }} en base
+        </p>
+        <p v-else class="tile-stat tile-loading">Chargement...</p>
+        <p v-if="criticalCount > 0" class="tile-detail tile-alert">
+          {{ criticalCount }} faille{{ criticalCount === 1 ? '' : 's' }} critique{{ criticalCount === 1 ? '' : 's' }}
+        </p>
+        <p v-else-if="lastArticle" class="tile-detail">{{ lastArticle.title }}</p>
+        <p v-else-if="articlesLoaded" class="tile-detail tile-empty">Clique "Actualiser" pour aller chercher des articles</p>
+      </button>
 
-      <div class="tile tile-soon">
+      <button type="button" class="tile tile-active" @click="emit('navigate', 'kanban')">
         <div class="tile-head">
           <svg class="tile-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="3" y="4" width="18" height="16" rx="1" stroke="currentColor" stroke-width="2" />
@@ -92,8 +160,15 @@ const lastTarget = computed(() => (targets.value.length ? targets.value[0] : nul
           </svg>
           <span class="tile-title">Kanban projets</span>
         </div>
-        <p class="tile-soon-badge">Bientôt disponible</p>
-      </div>
+        <p v-if="kanbanLoaded" class="tile-stat">
+          <strong>{{ kanbanCardCount }}</strong> carte{{ kanbanCardCount === 1 ? '' : 's' }}
+        </p>
+        <p v-else class="tile-stat tile-loading">Chargement...</p>
+        <p v-if="kanbanInProgressCount > 0" class="tile-detail">
+          {{ kanbanInProgressCount }} en cours
+        </p>
+        <p v-else-if="kanbanLoaded" class="tile-detail tile-empty">Aucune carte en cours</p>
+      </button>
 
       <div class="tile tile-soon">
         <div class="tile-head">
@@ -112,21 +187,108 @@ const lastTarget = computed(() => (targets.value.length ? targets.value[0] : nul
 
 <style scoped>
 .dashboard {
-  max-width: 900px;
+  max-width: 1040px;
   margin: 0 auto;
 }
 
-h2 {
-  margin: 0 0 4px;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #14201e;
+.dashboard-section {
+  margin-top: 32px;
+}
+
+.dashboard-section-top {
+  margin-top: 0;
+  margin-bottom: 32px;
+}
+
+.terminal-title {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.terminal-window {
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(20, 32, 30, 0.08), 0 16px 36px rgba(10, 24, 22, 0.22);
+}
+
+.terminal-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #182c28;
+  padding: 9px 14px;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.dot-red {
+  background: #e5645a;
+}
+
+.dot-yellow {
+  background: #e0b04c;
+}
+
+.dot-green {
+  background: #5fbf7a;
+}
+
+.terminal-bar-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  color: #6e8b85;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.terminal-line {
+  background: #0d1917;
+  color: #59c9b6;
+  text-shadow: 0 0 10px rgba(89, 201, 182, 0.35);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.02rem;
+  padding: 16px 22px 20px;
+  margin: 0;
+  white-space: normal;
+}
+
+.prompt-user {
+  color: #7ab8e0;
+}
+
+.prompt-path {
+  color: #e0a15c;
+}
+
+.prompt-sep {
+  color: #6e8b85;
+  margin: 0 2px 0 0;
+}
+
+.cursor {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 .subtitle {
   margin: 0 0 28px;
   color: #5b6478;
   font-size: 0.92rem;
+  text-align: center;
 }
 
 .tile-grid {
@@ -200,10 +362,18 @@ h2 {
   margin: 0;
   font-size: 0.82rem;
   color: #5b6478;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tile-empty {
   font-style: italic;
+}
+
+.tile-alert {
+  color: #a3271b;
+  font-weight: 600;
 }
 
 .tile-soon-badge {

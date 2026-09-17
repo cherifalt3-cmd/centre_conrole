@@ -22,4 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-token-auth/', obtain_auth_token),
     path('api/recon/', include('recon.urls')),
+    path('api/veille/', include('veille.urls')),
+    path('api/kanban/', include('kanban.urls')),
 ]

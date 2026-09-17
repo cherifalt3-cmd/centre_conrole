@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'recon',
+    'veille',
+    'kanban',
 ]
 
 MIDDLEWARE = [
