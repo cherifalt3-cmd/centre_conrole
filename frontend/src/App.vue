@@ -6,6 +6,7 @@ import TargetList from './components/TargetList.vue'
 import ToolGenerator from './components/ToolGenerator.vue'
 import Veille from './components/Veille.vue'
 import Kanban from './components/Kanban.vue'
+import Osint from './components/Osint.vue'
 import { authToken, logout } from './auth'
 
 const currentView = ref('dashboard')
@@ -38,7 +39,7 @@ watch(sidebarVisible, (value) => {
         <span class="sidebar-label">Centre de contrôle</span>
       </div>
 
-      <p class="sidebar-section-label">Modules</p>
+      <p class="sidebar-section-label sidebar-label">Modules</p>
 
       <nav class="sidebar-nav">
         <button
@@ -106,73 +107,85 @@ watch(sidebarVisible, (value) => {
           </svg>
           <span class="sidebar-label">Kanban projets</span>
         </button>
+        <button
+          type="button"
+          :class="['sidebar-link', { active: currentView === 'osint' }]"
+          :title="!sidebarVisible ? 'OSINT automatique' : null"
+          @click="currentView = 'osint'"
+        >
+          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+            <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          <span class="sidebar-label">OSINT automatique</span>
+        </button>
       </nav>
 
       <div class="sidebar-doodle">
         <svg width="104" height="104" viewBox="0 0 64 64" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
           <!-- mer -->
-          <rect x="30" y="44" width="34" height="20" fill="#3f6fb8" />
-          <rect x="30" y="44" width="34" height="3" fill="#5b9bf0" />
+          <rect x="30" y="44" width="34" height="20" fill="#2c4f8a" />
+          <rect x="30" y="44" width="34" height="3" fill="#4f86d6" />
 
           <!-- ponton -->
-          <rect x="0" y="42" width="4" height="6" fill="#c9822b" />
-          <rect x="4" y="42" width="4" height="6" fill="#8a5a2b" />
-          <rect x="8" y="42" width="4" height="6" fill="#c9822b" />
-          <rect x="12" y="42" width="4" height="6" fill="#8a5a2b" />
-          <rect x="16" y="42" width="4" height="6" fill="#c9822b" />
-          <rect x="20" y="42" width="4" height="6" fill="#8a5a2b" />
-          <rect x="24" y="42" width="4" height="6" fill="#c9822b" />
-          <rect x="28" y="42" width="4" height="6" fill="#8a5a2b" />
-          <rect x="2" y="48" width="4" height="10" fill="#6b4423" />
-          <rect x="24" y="48" width="4" height="10" fill="#6b4423" />
+          <rect x="0" y="42" width="4" height="6" fill="#b1701f" />
+          <rect x="4" y="42" width="4" height="6" fill="#7a4d22" />
+          <rect x="8" y="42" width="4" height="6" fill="#b1701f" />
+          <rect x="12" y="42" width="4" height="6" fill="#7a4d22" />
+          <rect x="16" y="42" width="4" height="6" fill="#b1701f" />
+          <rect x="20" y="42" width="4" height="6" fill="#7a4d22" />
+          <rect x="24" y="42" width="4" height="6" fill="#b1701f" />
+          <rect x="28" y="42" width="4" height="6" fill="#7a4d22" />
+          <rect x="2" y="48" width="4" height="10" fill="#5c3a1e" />
+          <rect x="24" y="48" width="4" height="10" fill="#5c3a1e" />
 
           <!-- personnage assis, profil face à la mer -->
           <g class="doodle-figure">
             <!-- casquette -->
-            <rect x="14" y="16" width="12" height="4" fill="#3d2f8f" />
-            <rect x="14" y="20" width="12" height="2" fill="#3d2f8f" />
-            <rect x="26" y="20" width="6" height="2" fill="#2a2066" />
+            <rect x="14" y="16" width="12" height="4" fill="#6355d6" />
+            <rect x="14" y="20" width="12" height="2" fill="#6355d6" />
+            <rect x="26" y="20" width="6" height="2" fill="#4a3fae" />
             <!-- visage -->
-            <rect x="16" y="22" width="12" height="6" fill="#e8b382" />
-            <rect x="24" y="24" width="2" height="2" fill="#2b2b4a" />
-            <rect x="28" y="24" width="2" height="2" fill="#e8b382" />
+            <rect x="16" y="22" width="12" height="6" fill="#d9a877" />
+            <rect x="24" y="24" width="2" height="2" fill="#20233a" />
+            <rect x="28" y="24" width="2" height="2" fill="#d9a877" />
             <!-- veste -->
-            <rect x="14" y="28" width="14" height="10" fill="#5a7247" />
-            <rect x="14" y="28" width="14" height="2" fill="#6b855a" />
+            <rect x="14" y="28" width="14" height="10" fill="#4f6640" />
+            <rect x="14" y="28" width="14" height="2" fill="#5e7a4d" />
             <!-- jambes qui pendent au bord -->
-            <rect x="16" y="38" width="14" height="2" fill="#2b2b4a" />
-            <rect x="20" y="40" width="4" height="10" fill="#2b2b4a" />
-            <rect x="26" y="40" width="4" height="10" fill="#2b2b4a" />
-            <rect x="19" y="50" width="6" height="3" fill="#14213d" />
-            <rect x="25" y="50" width="6" height="3" fill="#14213d" />
+            <rect x="16" y="38" width="14" height="2" fill="#20233a" />
+            <rect x="20" y="40" width="4" height="10" fill="#20233a" />
+            <rect x="26" y="40" width="4" height="10" fill="#20233a" />
+            <rect x="19" y="50" width="6" height="3" fill="#14162a" />
+            <rect x="25" y="50" width="6" height="3" fill="#14162a" />
           </g>
 
           <!-- bras + canne (balance et pique) -->
           <g class="doodle-rod">
-            <rect x="26" y="30" width="4" height="3" fill="#5a7247" />
-            <rect x="29" y="32" width="4" height="3" fill="#5a7247" />
-            <rect x="32" y="33" width="3" height="3" fill="#e8b382" />
-            <rect x="35" y="31" width="4" height="3" fill="#8a5a34" />
-            <rect x="39" y="28" width="4" height="3" fill="#8a5a34" />
-            <rect x="43" y="25" width="4" height="3" fill="#8a5a34" />
-            <rect x="47" y="22" width="4" height="3" fill="#a06a3f" />
+            <rect x="26" y="30" width="4" height="3" fill="#4f6640" />
+            <rect x="29" y="32" width="4" height="3" fill="#4f6640" />
+            <rect x="32" y="33" width="3" height="3" fill="#d9a877" />
+            <rect x="35" y="31" width="4" height="3" fill="#7a4d2e" />
+            <rect x="39" y="28" width="4" height="3" fill="#7a4d2e" />
+            <rect x="43" y="25" width="4" height="3" fill="#7a4d2e" />
+            <rect x="47" y="22" width="4" height="3" fill="#8f5e38" />
           </g>
 
           <!-- ligne -->
-          <rect class="doodle-line" x="49" y="25" width="1" height="20" fill="#dfe6ef" />
+          <rect class="doodle-line" x="49" y="25" width="1" height="20" fill="#c3ccdb" />
 
           <!-- flotteur -->
           <g class="doodle-bobber">
-            <rect x="48" y="43" width="3" height="2" fill="#e6e6e6" />
-            <rect x="48" y="45" width="3" height="2" fill="#d9534f" />
+            <rect x="48" y="43" width="3" height="2" fill="#dcdee4" />
+            <rect x="48" y="45" width="3" height="2" fill="#c9524e" />
           </g>
 
           <!-- ondes autour du flotteur -->
-          <rect class="doodle-ring doodle-ring-l" x="43" y="47" width="3" height="1" fill="#fff" />
-          <rect class="doodle-ring doodle-ring-r" x="53" y="47" width="3" height="1" fill="#fff" />
+          <rect class="doodle-ring doodle-ring-l" x="43" y="47" width="3" height="1" fill="#cfe0ff" />
+          <rect class="doodle-ring doodle-ring-r" x="53" y="47" width="3" height="1" fill="#cfe0ff" />
 
           <!-- vaguelettes -->
-          <g class="doodle-water" fill="#fff">
+          <g class="doodle-water" fill="#cfe0ff">
             <rect x="33" y="53" width="5" height="1" />
             <rect x="57" y="51" width="5" height="1" />
             <rect x="40" y="59" width="5" height="1" />
@@ -191,10 +204,11 @@ watch(sidebarVisible, (value) => {
     </aside>
 
     <div class="main-area">
-      <!-- décor spatial clair -->
+      <!-- décor spatial sombre -->
       <div class="space-bg">
         <div class="sky-nebula sky-nebula-a"></div>
         <div class="sky-nebula sky-nebula-b"></div>
+        <div class="sky-grid"></div>
         <div class="sky-stars sky-stars-1"></div>
         <div class="sky-stars sky-stars-2"></div>
         <div class="sky-shooting"></div>
@@ -204,6 +218,7 @@ watch(sidebarVisible, (value) => {
           <div class="sky-orbit sky-orbit-2"><span class="sky-planet sky-planet-2"></span></div>
           <div class="sky-orbit sky-orbit-3"><span class="sky-planet sky-planet-3"></span></div>
         </div>
+        <div class="sky-vignette"></div>
       </div>
 
       <div class="main-topbar">
@@ -219,6 +234,10 @@ watch(sidebarVisible, (value) => {
             <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
         </button>
+        <span class="topbar-status">
+          <span class="topbar-dot"></span>
+          <span class="topbar-status-text">système en ligne</span>
+        </span>
       </div>
       <main>
         <Dashboard v-if="currentView === 'dashboard'" @navigate="currentView = $event" />
@@ -226,6 +245,7 @@ watch(sidebarVisible, (value) => {
         <ToolGenerator v-else-if="currentView === 'generator'" />
         <Veille v-else-if="currentView === 'veille'" />
         <Kanban v-else-if="currentView === 'kanban'" />
+        <Osint v-else-if="currentView === 'osint'" />
       </main>
       <footer class="app-footer">Centre de contrôle — usage local</footer>
     </div>
@@ -236,97 +256,121 @@ watch(sidebarVisible, (value) => {
 .app-shell {
   min-height: 100vh;
   display: flex;
+  background: var(--bg-base);
 }
 
+/* ---------- sidebar ---------- */
 .sidebar {
-  width: 240px;
+  width: 268px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #1a2c4d 0%, #101a30 100%);
   display: flex;
   flex-direction: column;
-  padding: 22px 14px;
-  margin-block: 6px;
-  margin-inline-start: 0;
-  border-radius: 12px;
-  box-shadow: 2px 0 12px rgba(10, 24, 22, 0.12);
-  z-index: 1;
+  padding: 20px 12px;
+  margin: 10px 0 10px 10px;
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.022) 45%, rgba(255, 255, 255, 0.012) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow: var(--shadow-3);
+  z-index: 2;
   overflow: hidden;
-  transition: width 0.2s ease, margin 0.2s ease, padding 0.2s ease, opacity 0.15s ease;
+  transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s ease;
   position: sticky;
-  top: 6px;
+  top: 10px;
   align-self: flex-start;
-  height: calc(100vh - 12px);
+  height: calc(100vh - 20px);
 }
 
-/* mode réduit : bande étroite avec les icônes seulement */
+/* liseré lumineux sur l'arête gauche */
+.sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(170deg, rgba(124, 108, 245, 0.45), rgba(255, 255, 255, 0) 38%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
 .sidebar.collapsed {
-  width: 64px;
+  width: 68px;
   padding-inline: 10px;
 }
 
 .sidebar.collapsed .sidebar-label {
-  display: none;
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .sidebar.collapsed .sidebar-section-label {
-  visibility: hidden;
   height: 0;
-  padding: 10px 0 0;
+  padding: 8px 0 0;
 }
 
 .sidebar.collapsed .sidebar-doodle {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.sidebar.collapsed .sidebar-brand {
-  justify-content: center;
-  padding-inline: 0;
-}
-
+.sidebar.collapsed .sidebar-brand,
 .sidebar.collapsed .sidebar-link,
 .sidebar.collapsed .sidebar-logout {
   justify-content: center;
   padding-inline: 0;
 }
 
-.sidebar.collapsed .sidebar-link.active::before {
-  display: none;
-}
-
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  color: #fff;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
   font-weight: 600;
-  font-size: 0.98rem;
+  font-size: 0.95rem;
   letter-spacing: -0.01em;
-  padding: 6px 10px 18px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 10px 18px;
+  border-bottom: 1px solid var(--border);
 }
 
 .sidebar-logo {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
   flex-shrink: 0;
-  filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff);
+  border-radius: 9px;
+  box-shadow: 0 0 0 1px var(--border), 0 4px 18px rgba(124, 108, 245, 0.25);
+}
+
+/* garde-fou : un libellé long est tronqué au lieu de déborder du panneau */
+.sidebar-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity 0.18s ease;
 }
 
 .sidebar-section-label {
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.63rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #7288b5;
-  padding: 22px 10px 8px;
+  color: var(--text-faint);
+  padding: 20px 12px 10px;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 3px;
   flex: 1;
 }
 
@@ -334,56 +378,53 @@ watch(sidebarVisible, (value) => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px 9px 16px;
+  gap: 11px;
+  padding: 9px 12px;
   background: none;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 0.87rem;
-  color: #a9bede;
+  font-size: 0.86rem;
+  color: var(--text-muted);
   text-align: left;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  min-width: 0;
+  overflow: hidden;
+  transition: background 0.16s ease, color 0.16s ease;
 }
 
 .sidebar-link-icon {
   flex-shrink: 0;
-  color: #6c8ebf;
-}
-
-.sidebar-link.active .sidebar-link-icon {
-  color: #fff;
+  color: var(--text-faint);
+  transition: color 0.16s ease;
 }
 
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
-  transform: translateX(2px);
+  background: var(--glass-2);
+  color: var(--text);
+}
+
+.sidebar-link:hover .sidebar-link-icon {
+  color: var(--text-muted);
 }
 
 .sidebar-link.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(90deg, var(--accent-soft), rgba(124, 108, 245, 0.04));
   color: #fff;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px var(--accent-line);
 }
 
-.sidebar-link.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 16px;
-  border-radius: 2px;
-  background: #6c8ebf;
+.sidebar-link.active .sidebar-link-icon {
+  color: var(--accent);
+  filter: drop-shadow(0 0 6px rgba(124, 108, 245, 0.7));
 }
 
 .sidebar-doodle {
   display: flex;
   justify-content: center;
-  padding-top: 8px;
+  padding-top: 10px;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
 }
 
 .doodle-figure {
@@ -432,190 +473,151 @@ watch(sidebarVisible, (value) => {
   animation: doodle-ripple 1.8s steps(1, jump-none) infinite reverse;
 }
 
-/* balance douce, puis pique d'un coup (une touche) puis remonte */
 @keyframes doodle-cast {
-  0%, 55% {
-    transform: rotate(0deg);
-  }
-  40% {
-    transform: rotate(-2deg);
-  }
-  65% {
-    transform: rotate(7deg);
-  }
-  72% {
-    transform: rotate(-5deg);
-  }
-  82% {
-    transform: rotate(2deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
+  0%, 55% { transform: rotate(0deg); }
+  40% { transform: rotate(-2deg); }
+  65% { transform: rotate(7deg); }
+  72% { transform: rotate(-5deg); }
+  82% { transform: rotate(2deg); }
+  100% { transform: rotate(0deg); }
 }
 
-/* le flotteur ondule, puis plonge au moment de la touche */
 @keyframes doodle-dip {
-  0%, 45% {
-    transform: translateY(0);
-  }
-  25% {
-    transform: translateY(1px);
-  }
-  60% {
-    transform: translateY(1px);
-  }
-  66% {
-    transform: translateY(5px);
-  }
-  78% {
-    transform: translateY(0);
-  }
-  100% {
-    transform: translateY(0);
-  }
+  0%, 45% { transform: translateY(0); }
+  25% { transform: translateY(1px); }
+  60% { transform: translateY(1px); }
+  66% { transform: translateY(5px); }
+  78% { transform: translateY(0); }
+  100% { transform: translateY(0); }
 }
 
-/* la ligne s'étire quand le flotteur plonge */
 @keyframes doodle-line {
-  0%, 60% {
-    transform: scaleY(1);
-  }
-  66% {
-    transform: scaleY(1.22);
-  }
-  78% {
-    transform: scaleY(1);
-  }
-  100% {
-    transform: scaleY(1);
-  }
+  0%, 60% { transform: scaleY(1); }
+  66% { transform: scaleY(1.22); }
+  78% { transform: scaleY(1); }
+  100% { transform: scaleY(1); }
 }
 
 @keyframes doodle-ring-l {
-  0%, 63% {
-    opacity: 0;
-    transform: translateX(0);
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-4px);
-  }
+  0%, 63% { opacity: 0; transform: translateX(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-4px); }
 }
 
 @keyframes doodle-ring-r {
-  0%, 63% {
-    opacity: 0;
-    transform: translateX(0);
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(4px);
-  }
+  0%, 63% { opacity: 0; transform: translateX(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(4px); }
 }
 
 @keyframes doodle-ripple {
-  0%, 49% {
-    opacity: 1;
-  }
-  50%, 100% {
-    opacity: 0.3;
-  }
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
 }
 
 @keyframes doodle-bob {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-1px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
 }
 
 .sidebar-logout {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   margin-top: 12px;
-  padding: 14px 12px 9px;
+  padding: 13px 12px 6px;
   background: none;
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border);
   border-radius: 0;
   cursor: pointer;
-  font-size: 0.82rem;
-  color: #a9bede;
+  font-size: 0.8rem;
+  color: var(--text-faint);
   text-align: left;
-  transition: color 0.15s ease;
+  min-width: 0;
+  overflow: hidden;
+  transition: color 0.16s ease;
 }
 
 .sidebar-logout-icon {
   flex-shrink: 0;
-  color: #6c8ebf;
 }
 
 .sidebar-logout:hover {
-  color: #fff;
+  color: var(--danger);
 }
 
+/* ---------- zone principale ---------- */
 .main-area {
   position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: transparent;
 }
 
-/* ---------- décor spatial clair ---------- */
 .space-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background: #eef1f6;
+  background:
+    radial-gradient(ellipse 80% 60% at 70% -10%, #171a2e 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 10% 110%, #141b2c 0%, transparent 60%),
+    var(--bg-base);
   overflow: hidden;
   pointer-events: none;
+}
+
+.sky-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, #000 0%, transparent 75%);
+}
+
+.sky-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 40%, rgba(5, 6, 10, 0.75) 100%);
 }
 
 .sky-nebula {
   position: absolute;
   border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.45;
+  filter: blur(90px);
+  opacity: 0.4;
 }
 
 .sky-nebula-a {
-  width: 560px;
-  height: 560px;
-  top: -160px;
-  right: 10%;
-  background: radial-gradient(circle, #d7c9ff 0%, transparent 70%);
+  width: 620px;
+  height: 620px;
+  top: -200px;
+  right: 6%;
+  background: radial-gradient(circle, rgba(124, 108, 245, 0.55) 0%, transparent 70%);
   animation: sky-drift-a 30s ease-in-out infinite;
 }
 
 .sky-nebula-b {
-  width: 620px;
-  height: 620px;
-  bottom: -220px;
-  left: 5%;
-  background: radial-gradient(circle, #cfe0ff 0%, transparent 70%);
+  width: 680px;
+  height: 680px;
+  bottom: -260px;
+  left: 2%;
+  background: radial-gradient(circle, rgba(79, 156, 249, 0.42) 0%, transparent 70%);
   animation: sky-drift-b 36s ease-in-out infinite;
 }
 
 @keyframes sky-drift-a {
   0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(-30px, 24px); }
+  50% { transform: translate(-34px, 26px); }
 }
 
 @keyframes sky-drift-b {
   0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(30px, -20px); }
+  50% { transform: translate(32px, -22px); }
 }
 
 .sky-stars {
@@ -626,36 +628,36 @@ watch(sidebarVisible, (value) => {
 
 .sky-stars-1 {
   background-image:
-    radial-gradient(1px 1px at 40px 60px, rgba(70, 100, 170, 0.5), transparent),
-    radial-gradient(1px 1px at 160px 120px, rgba(120, 90, 190, 0.45), transparent),
-    radial-gradient(1px 1px at 260px 40px, rgba(70, 100, 170, 0.5), transparent),
-    radial-gradient(1px 1px at 90px 220px, rgba(90, 110, 180, 0.4), transparent),
-    radial-gradient(1px 1px at 320px 180px, rgba(70, 100, 170, 0.5), transparent);
+    radial-gradient(1px 1px at 40px 60px, rgba(220, 228, 255, 0.85), transparent),
+    radial-gradient(1px 1px at 160px 120px, rgba(190, 180, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 260px 40px, rgba(220, 228, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 90px 220px, rgba(200, 215, 255, 0.65), transparent),
+    radial-gradient(1px 1px at 320px 180px, rgba(220, 228, 255, 0.8), transparent);
   background-size: 360px 300px;
   animation: sky-twinkle 5s ease-in-out infinite;
 }
 
 .sky-stars-2 {
   background-image:
-    radial-gradient(1.5px 1.5px at 120px 90px, rgba(120, 90, 190, 0.45), transparent),
-    radial-gradient(1.5px 1.5px at 300px 240px, rgba(70, 100, 170, 0.4), transparent),
-    radial-gradient(1.5px 1.5px at 420px 140px, rgba(90, 110, 180, 0.4), transparent);
+    radial-gradient(1.6px 1.6px at 120px 90px, rgba(190, 180, 255, 0.75), transparent),
+    radial-gradient(1.6px 1.6px at 300px 240px, rgba(220, 228, 255, 0.6), transparent),
+    radial-gradient(1.6px 1.6px at 420px 140px, rgba(200, 215, 255, 0.6), transparent);
   background-size: 480px 360px;
   animation: sky-twinkle 7s ease-in-out infinite 1.5s;
 }
 
 @keyframes sky-twinkle {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.9; }
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
 }
 
 .sky-shooting {
   position: absolute;
   top: 12%;
   left: -140px;
-  width: 110px;
-  height: 2px;
-  background: linear-gradient(90deg, rgba(120, 150, 220, 0), rgba(120, 150, 220, 0.9));
+  width: 120px;
+  height: 1.5px;
+  background: linear-gradient(90deg, rgba(160, 190, 255, 0), rgba(190, 210, 255, 0.95));
   border-radius: 2px;
   opacity: 0;
   animation: sky-shoot 9s ease-in infinite 2s;
@@ -663,8 +665,8 @@ watch(sidebarVisible, (value) => {
 
 @keyframes sky-shoot {
   0% { opacity: 0; transform: translate(0, 0) rotate(24deg); }
-  4% { opacity: 0.8; }
-  16% { opacity: 0.8; }
+  4% { opacity: 0.9; }
+  16% { opacity: 0.9; }
   26% { opacity: 0; transform: translate(60vw, 34vh) rotate(24deg); }
   100% { opacity: 0; transform: translate(60vw, 34vh) rotate(24deg); }
 }
@@ -681,26 +683,26 @@ watch(sidebarVisible, (value) => {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 34px;
-  height: 34px;
-  margin: -17px 0 0 -17px;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #ffe7a8, #ffc65c 60%, #ffb03d 90%);
-  opacity: 0.55;
-  box-shadow: 0 0 26px 10px rgba(255, 190, 90, 0.28);
+  background: radial-gradient(circle at 40% 35%, #fff0c4, #ffc65c 60%, #ff9d3d 90%);
+  opacity: 0.5;
+  box-shadow: 0 0 40px 14px rgba(255, 180, 90, 0.22);
   animation: sky-sun-pulse 6s ease-in-out infinite;
 }
 
 @keyframes sky-sun-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 0.7; }
+  0%, 100% { opacity: 0.42; }
+  50% { opacity: 0.62; }
 }
 
 .sky-orbit {
   position: absolute;
   top: 50%;
   left: 50%;
-  border: 1px solid rgba(70, 100, 170, 0.1);
+  border: 1px solid rgba(180, 190, 255, 0.07);
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
@@ -720,37 +722,45 @@ watch(sidebarVisible, (value) => {
   left: 50%;
   transform: translateX(-50%);
   border-radius: 50%;
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .sky-planet-1 {
-  width: 12px;
-  height: 12px;
-  background: radial-gradient(circle at 35% 30%, #ffd6a8, #d98a52);
+  width: 11px;
+  height: 11px;
+  background: radial-gradient(circle at 35% 30%, #ffd6a8, #c97a42);
+  box-shadow: 0 0 12px rgba(255, 190, 140, 0.5);
 }
 
 .sky-planet-2 {
-  width: 16px;
-  height: 16px;
-  top: -8px;
-  background: radial-gradient(circle at 35% 30%, #bcdcff, #6a9fe0);
+  width: 15px;
+  height: 15px;
+  top: -7.5px;
+  background: radial-gradient(circle at 35% 30%, #bcdcff, #4f8fd6);
+  box-shadow: 0 0 14px rgba(120, 180, 255, 0.5);
 }
 
 .sky-planet-3 {
-  width: 14px;
-  height: 14px;
-  top: -7px;
-  background: radial-gradient(circle at 35% 30%, #d8c8ff, #9070d0);
+  width: 13px;
+  height: 13px;
+  top: -6.5px;
+  background: radial-gradient(circle at 35% 30%, #d8c8ff, #7c6cf5);
+  box-shadow: 0 0 14px rgba(140, 120, 255, 0.55);
 }
 
+/* ---------- topbar ---------- */
 .main-topbar {
-  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 30px;
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(238, 241, 246, 0.82);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(10, 11, 16, 0.72);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
 }
 
 .sidebar-toggle {
@@ -759,33 +769,59 @@ watch(sidebarVisible, (value) => {
   justify-content: center;
   width: 34px;
   height: 34px;
-  background: #fff;
-  border: 1px solid #d8deea;
-  border-radius: 8px;
-  color: #5b6478;
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
 }
 
 .sidebar-toggle:hover {
-  border-color: #1e3a5f;
-  color: #1e3a5f;
+  background: var(--glass-2);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.topbar-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.topbar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 
 main {
   position: relative;
   z-index: 1;
   flex: 1;
-  padding: 28px;
+  padding: 32px 30px;
 }
 
 .app-footer {
   position: relative;
   z-index: 1;
-  padding: 20px 28px 32px;
+  padding: 18px 30px 30px;
   text-align: center;
-  color: #8a93a3;
-  font-size: 0.8rem;
+  color: var(--text-faint);
+  font-size: 0.76rem;
 }
 
 @media (max-width: 640px) {
@@ -795,29 +831,44 @@ main {
 
   .sidebar,
   .sidebar.collapsed {
-    width: 100%;
+    width: auto;
+    height: auto;
+    position: static;
     flex-direction: row;
     align-items: center;
-    padding: 12px 16px;
-  }
-
-  .sidebar.collapsed .sidebar-brand,
-  .sidebar.collapsed .sidebar-link,
-  .sidebar.collapsed .sidebar-logout {
-    padding-inline: 8px;
+    padding: 10px 14px;
+    margin: 8px;
   }
 
   .sidebar-brand {
-    padding: 0 14px 0 0;
+    padding: 0 12px 0 0;
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+  }
+
+  .sidebar-section-label,
+  .sidebar-doodle {
+    display: none;
   }
 
   .sidebar-nav {
     flex-direction: row;
+    overflow-x: auto;
   }
 
   .sidebar-logout {
     margin-top: 0;
     margin-left: auto;
+    padding: 6px 10px;
+    border-top: none;
+  }
+
+  main {
+    padding: 22px 16px;
+  }
+
+  .topbar-status-text {
+    display: none;
   }
 }
 </style>

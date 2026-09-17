@@ -2,9 +2,14 @@ import re
 import scrapy
 
 
-EMAIL_PATTERN = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
+EMAIL_PATTERN = re.compile(
+    r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(?!png\b|jpe?g\b|gif\b|svg\b|webp\b|ico\b)[a-zA-Z]{2,}',
+    re.IGNORECASE,
+)
 
 SOCIAL_DOMAINS = ['twitter.com', 'x.com', 'linkedin.com', 'github.com', 'facebook.com', 'instagram.com']
+
+TEXT_XPATH = '//body//text()[not(ancestor::script) and not(ancestor::style) and not(ancestor::noscript)]'
 
 
 class OsintSpider(scrapy.Spider):
@@ -13,6 +18,7 @@ class OsintSpider(scrapy.Spider):
     custom_settings = {
         'DEPTH_LIMIT': 2,
         'CLOSESPIDER_PAGECOUNT': 30,
+        'DOWNLOAD_TIMEOUT': 15,
     }
 
     def __init__(self, target=None, *args, **kwargs):
@@ -24,7 +30,7 @@ class OsintSpider(scrapy.Spider):
         self.start_urls = [f'https://{self.target_domain}']
 
     def parse(self, response):
-        text = ' '.join(response.css('*::text').getall())
+        text = ' '.join(response.xpath(TEXT_XPATH).getall())
         emails = set(EMAIL_PATTERN.findall(text))
 
         social_links = set()

@@ -28,10 +28,10 @@ SCRAPY_CLOUD_PROJECT_ID = os.environ.get('SCRAPY_CLOUD_PROJECT_ID', '')
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-46hn9a=y&-o1!2p+sw!_iliybs2c669n)i=0xj1a37&ap^4lbb'
+SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = []
 
@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'recon',
     'veille',
     'kanban',
+    'osint',
 ]
 
 MIDDLEWARE = [
@@ -148,6 +149,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/min',
+        'user': '120/min',
+    },
 }
 
 CORS_ALLOWED_ORIGINS = [

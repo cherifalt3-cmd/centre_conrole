@@ -19,3 +19,7 @@ dist/
 
 # Cache local Scrapy
 .scrapy/
+
+# Artefacts generes par shub deploy
+osint_scraper/build/
+osint_scraper/project.egg-info/

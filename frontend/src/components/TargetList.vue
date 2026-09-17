@@ -102,7 +102,10 @@ onMounted(fetchTargets)
 
 <template>
   <div class="targets">
-    <h2>Carnet de cibles</h2>
+    <div class="targets-head">
+      <p class="eyebrow">Inventaire</p>
+      <h2>Carnet de cibles</h2>
+    </div>
 
     <form class="add-form card" @submit.prevent="addTarget">
       <div class="form-row">
@@ -159,32 +162,39 @@ onMounted(fetchTargets)
 
 <style scoped>
 .targets {
-  max-width: 720px;
+  max-width: 780px;
   margin: 0 auto;
 }
 
-h2 {
+.targets-head {
   text-align: center;
-  margin: 0 0 40px;
+  margin-bottom: 28px;
+}
+
+h2 {
+  margin: 6px 0 0;
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 2.1rem;
+  font-size: 2.05rem;
   font-weight: 700;
-  color: #14201e;
+  color: var(--text);
+  text-shadow: 0 2px 30px rgba(124, 108, 245, 0.2);
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #d8deea;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(20, 32, 30, 0.05), 0 6px 18px rgba(20, 32, 30, 0.05);
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow: var(--shadow-2);
 }
 
 .add-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
-  margin-bottom: 24px;
+  padding: 18px;
+  margin-bottom: 26px;
 }
 
 .form-row {
@@ -193,51 +203,68 @@ h2 {
   flex-wrap: wrap;
 }
 
+.add-form input,
+.notes-input,
+.edit-form input {
+  padding: 10px 12px;
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.88rem;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
 .add-form input {
   flex: 1;
   min-width: 140px;
-  padding: 9px 11px;
-  border: 1px solid #c5cedb;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .notes-input {
   width: 100%;
-  padding: 9px 11px;
-  border: 1px solid #c5cedb;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  box-sizing: border-box;
   resize: vertical;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  line-height: 1.55;
+}
+
+.add-form input::placeholder,
+.notes-input::placeholder,
+.edit-form input::placeholder {
+  color: var(--text-faint);
 }
 
 .add-form input:focus,
-.notes-input:focus {
+.notes-input:focus,
+.edit-form input:focus {
   outline: none;
-  border-color: #1e3a5f;
-  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.15);
+  background: var(--glass-2);
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .add-form button {
-  padding: 9px 16px;
-  background: #1e3a5f;
+  align-self: flex-start;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--accent), #6355d6);
   color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-sm);
+  font-size: 0.87rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease;
+  box-shadow: 0 6px 22px rgba(124, 108, 245, 0.28);
+  transition: filter 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
 .add-form button:hover {
-  background: #14213d;
+  filter: brightness(1.12);
+  box-shadow: 0 8px 30px rgba(124, 108, 245, 0.42);
+  transform: translateY(-1px);
 }
 
 .error {
-  color: #a85a17;
+  color: var(--danger);
+  font-size: 0.87rem;
+  margin-bottom: 14px;
 }
 
 .target-list {
@@ -250,21 +277,25 @@ h2 {
 
 .target-list li {
   min-width: 0;
-  background: #fff;
-  border: 1px solid #d8deea;
-  border-radius: 10px;
-  padding: 14px 16px;
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 15px 17px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  box-shadow: 0 1px 2px rgba(20, 32, 30, 0.04);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow: var(--shadow-1);
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .target-list li:hover {
-  border-color: #c5cedb;
-  box-shadow: 0 4px 14px rgba(20, 32, 30, 0.06);
+  background: var(--glass-2);
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
 }
 
 .target-info {
@@ -273,13 +304,16 @@ h2 {
 }
 
 .target-info strong {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.94rem;
   overflow-wrap: break-word;
 }
 
 .notes {
-  color: #5b6478;
-  font-size: 0.88rem;
-  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.83rem;
+  margin: 6px 0 0;
   overflow-wrap: break-word;
 }
 
@@ -290,28 +324,33 @@ h2 {
   gap: 8px;
   min-width: 0;
   max-width: 100%;
+  margin-left: 6px;
 }
 
 .address-text {
   min-width: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+  color: var(--text-muted);
   overflow-wrap: break-word;
 }
 
 .copy-address-btn {
   flex-shrink: 0;
-  background: none;
-  border: 1px solid #c5cedb;
-  color: #1e3a5f;
+  background: var(--glass-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
   border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 0.74rem;
+  padding: 2px 9px;
+  font-size: 0.71rem;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .copy-address-btn:hover {
-  background: #e5eff5;
-  border-color: #1e3a5f;
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
 }
 
 .item-actions {
@@ -321,40 +360,32 @@ h2 {
   flex-shrink: 0;
 }
 
-.edit-btn {
+.edit-btn,
+.delete-btn,
+.cancel-btn {
   flex-shrink: 0;
-  background: none;
-  border: 1px solid #c5cedb;
-  color: #5b6478;
+  background: var(--glass-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
   border-radius: 7px;
-  padding: 5px 10px;
-  font-size: 0.8rem;
+  padding: 6px 12px;
+  font-size: 0.78rem;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.edit-btn:hover {
-  background: #f2f5fa;
-  border-color: #1e3a5f;
-  color: #1e3a5f;
-}
-
-.delete-btn {
-  flex-shrink: 0;
-  background: none;
-  border: 1px solid #a85a17;
-  color: #a85a17;
-  border-radius: 7px;
-  padding: 5px 10px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s ease;
+.edit-btn:hover,
+.cancel-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
 }
 
 .delete-btn:hover {
-  background: #f6ece0;
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .edit-form {
@@ -373,16 +404,8 @@ h2 {
 .edit-form input {
   flex: 1;
   min-width: 120px;
-  padding: 7px 10px;
-  border: 1px solid #c5cedb;
-  border-radius: 7px;
-  font-size: 0.85rem;
-}
-
-.edit-form input:focus {
-  outline: none;
-  border-color: #1e3a5f;
-  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.15);
+  padding: 8px 11px;
+  font-size: 0.84rem;
 }
 
 .edit-actions {
@@ -392,33 +415,20 @@ h2 {
 }
 
 .save-btn {
-  background: #1e3a5f;
+  background: linear-gradient(135deg, var(--accent), #6355d6);
   color: #fff;
-  border: none;
+  border: 1px solid var(--accent-line);
   border-radius: 7px;
-  padding: 7px 12px;
-  font-size: 0.82rem;
-  font-weight: 600;
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease;
+  box-shadow: 0 4px 16px rgba(124, 108, 245, 0.26);
+  transition: filter 0.16s ease, box-shadow 0.16s ease;
 }
 
 .save-btn:hover {
-  background: #14213d;
-}
-
-.cancel-btn {
-  background: none;
-  border: 1px solid #c5cedb;
-  color: #5b6478;
-  border-radius: 7px;
-  padding: 7px 12px;
-  font-size: 0.82rem;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.cancel-btn:hover {
-  background: #f2f5fa;
+  filter: brightness(1.12);
+  box-shadow: 0 6px 22px rgba(124, 108, 245, 0.4);
 }
 </style>

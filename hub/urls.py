@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/recon/', include('recon.urls')),
     path('api/veille/', include('veille.urls')),
     path('api/kanban/', include('kanban.urls')),
+    path('api/osint/', include('osint.urls')),
 ]
