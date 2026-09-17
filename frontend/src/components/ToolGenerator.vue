@@ -77,6 +77,7 @@ const CATEGORY_CLASSES = {
   Général: 'badge-general',
   'DNS / OSINT': 'badge-dns',
   Metasploit: 'badge-metasploit',
+  'DNS / SNMP / TFTP': 'badge-snmp',
 }
 
 function categoryClass(category) {
@@ -84,7 +85,7 @@ function categoryClass(category) {
 }
 
 // Liste des catégories présentes dans les suggestions, dans un ordre fixe et lisible
-const CATEGORY_ORDER = ['Général', 'DNS / OSINT', 'SMB', 'FTP', 'SSH', 'HTTP', 'SMTP', 'SQL', 'Metasploit']
+const CATEGORY_ORDER = ['Général', 'DNS / OSINT', 'SMB', 'FTP', 'SSH', 'HTTP', 'SMTP', 'SQL', 'DNS / SNMP / TFTP', 'Metasploit']
 
 const categories = computed(() => {
   const present = new Set(presets.value.map((p) => p.category).filter(Boolean))
@@ -805,6 +806,11 @@ watch(generatedCommand, (cmd) => {
 .badge-metasploit {
   background: #e6e6f7;
   color: #3d3d8f;
+}
+
+.badge-snmp {
+  background: #fdf0e0;
+  color: #a06a1f;
 }
 
 .preset-label {
