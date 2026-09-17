@@ -1,11 +1,12 @@
 <script setup>
 import { ref, watch } from 'vue'
 import Login from './components/Login.vue'
+import Dashboard from './components/Dashboard.vue'
 import TargetList from './components/TargetList.vue'
 import ToolGenerator from './components/ToolGenerator.vue'
 import { authToken, logout } from './auth'
 
-const currentView = ref('targets')
+const currentView = ref('dashboard')
 
 let storedVisible = true
 try {
@@ -38,6 +39,18 @@ watch(sidebarVisible, (value) => {
       <p class="sidebar-section-label">Modules</p>
 
       <nav class="sidebar-nav">
+        <button
+          type="button"
+          :class="['sidebar-link', { active: currentView === 'dashboard' }]"
+          :title="!sidebarVisible ? 'Accueil' : null"
+          @click="currentView = 'dashboard'"
+        >
+          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 11L12 4L21 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M5 10V19A1 1 0 0 0 6 20H18A1 1 0 0 0 19 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span class="sidebar-label">Accueil</span>
+        </button>
         <button
           type="button"
           :class="['sidebar-link', { active: currentView === 'targets' }]"
@@ -179,7 +192,8 @@ watch(sidebarVisible, (value) => {
         </button>
       </div>
       <main>
-        <TargetList v-if="currentView === 'targets'" />
+        <Dashboard v-if="currentView === 'dashboard'" @navigate="currentView = $event" />
+        <TargetList v-else-if="currentView === 'targets'" />
         <ToolGenerator v-else-if="currentView === 'generator'" />
       </main>
       <footer class="app-footer">Centre de contrôle — usage local</footer>
