@@ -174,7 +174,7 @@ h2 {
 
 .card {
   background: #fff;
-  border: 1px solid #d7e0de;
+  border: 1px solid #d8deea;
   border-radius: 12px;
   box-shadow: 0 1px 2px rgba(20, 32, 30, 0.05), 0 6px 18px rgba(20, 32, 30, 0.05);
 }
@@ -197,7 +197,7 @@ h2 {
   flex: 1;
   min-width: 140px;
   padding: 9px 11px;
-  border: 1px solid #c3d0cd;
+  border: 1px solid #c5cedb;
   border-radius: 8px;
   font-size: 0.9rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -206,7 +206,7 @@ h2 {
 .notes-input {
   width: 100%;
   padding: 9px 11px;
-  border: 1px solid #c3d0cd;
+  border: 1px solid #c5cedb;
   border-radius: 8px;
   font-size: 0.9rem;
   box-sizing: border-box;
@@ -217,13 +217,13 @@ h2 {
 .add-form input:focus,
 .notes-input:focus {
   outline: none;
-  border-color: #0f6d63;
-  box-shadow: 0 0 0 3px rgba(15, 109, 99, 0.15);
+  border-color: #1e3a5f;
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.15);
 }
 
 .add-form button {
   padding: 9px 16px;
-  background: #0f6d63;
+  background: #1e3a5f;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -233,7 +233,7 @@ h2 {
 }
 
 .add-form button:hover {
-  background: #0a4f48;
+  background: #14213d;
 }
 
 .error {
@@ -251,7 +251,7 @@ h2 {
 .target-list li {
   min-width: 0;
   background: #fff;
-  border: 1px solid #d7e0de;
+  border: 1px solid #d8deea;
   border-radius: 10px;
   padding: 14px 16px;
   display: flex;
@@ -263,7 +263,7 @@ h2 {
 }
 
 .target-list li:hover {
-  border-color: #c3d0cd;
+  border-color: #c5cedb;
   box-shadow: 0 4px 14px rgba(20, 32, 30, 0.06);
 }
 
@@ -277,7 +277,7 @@ h2 {
 }
 
 .notes {
-  color: #5b6b68;
+  color: #5b6478;
   font-size: 0.88rem;
   margin: 4px 0 0;
   overflow-wrap: break-word;
@@ -300,8 +300,8 @@ h2 {
 .copy-address-btn {
   flex-shrink: 0;
   background: none;
-  border: 1px solid #c3d0cd;
-  color: #0f6d63;
+  border: 1px solid #c5cedb;
+  color: #1e3a5f;
   border-radius: 6px;
   padding: 2px 8px;
   font-size: 0.74rem;
@@ -311,7 +311,7 @@ h2 {
 
 .copy-address-btn:hover {
   background: #e5eff5;
-  border-color: #0f6d63;
+  border-color: #1e3a5f;
 }
 
 .item-actions {
@@ -324,8 +324,8 @@ h2 {
 .edit-btn {
   flex-shrink: 0;
   background: none;
-  border: 1px solid #c3d0cd;
-  color: #5b6b68;
+  border: 1px solid #c5cedb;
+  color: #5b6478;
   border-radius: 7px;
   padding: 5px 10px;
   font-size: 0.8rem;
@@ -335,9 +335,9 @@ h2 {
 }
 
 .edit-btn:hover {
-  background: #f6f9f8;
-  border-color: #0f6d63;
-  color: #0f6d63;
+  background: #f2f5fa;
+  border-color: #1e3a5f;
+  color: #1e3a5f;
 }
 
 .delete-btn {
@@ -374,15 +374,15 @@ h2 {
   flex: 1;
   min-width: 120px;
   padding: 7px 10px;
-  border: 1px solid #c3d0cd;
+  border: 1px solid #c5cedb;
   border-radius: 7px;
   font-size: 0.85rem;
 }
 
 .edit-form input:focus {
   outline: none;
-  border-color: #0f6d63;
-  box-shadow: 0 0 0 3px rgba(15, 109, 99, 0.15);
+  border-color: #1e3a5f;
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.15);
 }
 
 .edit-actions {
@@ -392,7 +392,7 @@ h2 {
 }
 
 .save-btn {
-  background: #0f6d63;
+  background: #1e3a5f;
   color: #fff;
   border: none;
   border-radius: 7px;
@@ -404,13 +404,13 @@ h2 {
 }
 
 .save-btn:hover {
-  background: #0a4f48;
+  background: #14213d;
 }
 
 .cancel-btn {
   background: none;
-  border: 1px solid #c3d0cd;
-  color: #5b6b68;
+  border: 1px solid #c5cedb;
+  color: #5b6478;
   border-radius: 7px;
   padding: 7px 12px;
   font-size: 0.82rem;
@@ -419,6 +419,6 @@ h2 {
 }
 
 .cancel-btn:hover {
-  background: #f6f9f8;
+  background: #f2f5fa;
 }
 </style>

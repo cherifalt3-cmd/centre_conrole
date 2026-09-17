@@ -624,7 +624,7 @@ watch(generatedCommand, (cmd) => {
   align-items: flex-start;
   gap: 2px;
   padding: 12px 16px;
-  border: 1px solid #d7e0de;
+  border: 1px solid #d8deea;
   background: #fff;
   border-radius: 10px;
   cursor: pointer;
@@ -633,7 +633,7 @@ watch(generatedCommand, (cmd) => {
 }
 
 .tab-btn:hover {
-  border-color: #0f6d63;
+  border-color: #1e3a5f;
 }
 
 .tab-btn-label {
@@ -644,12 +644,12 @@ watch(generatedCommand, (cmd) => {
 
 .tab-btn-sub {
   font-size: 0.75rem;
-  color: #8a9895;
+  color: #8a93a3;
 }
 
 .tab-btn.active {
-  background: #0f6d63;
-  border-color: #0f6d63;
+  background: #1e3a5f;
+  border-color: #1e3a5f;
   box-shadow: 0 4px 12px rgba(15, 109, 99, 0.25);
 }
 
@@ -669,7 +669,7 @@ watch(generatedCommand, (cmd) => {
 .quick-section,
 .builder-section {
   background: #fff;
-  border: 1px solid #d7e0de;
+  border: 1px solid #d8deea;
   border-radius: 12px;
   padding: 18px 20px;
   box-shadow: 0 1px 2px rgba(20, 32, 30, 0.05), 0 6px 18px rgba(20, 32, 30, 0.05);
@@ -684,9 +684,9 @@ watch(generatedCommand, (cmd) => {
 
 .filter-btn {
   padding: 5px 12px;
-  border: 1px solid #c3d0cd;
+  border: 1px solid #c5cedb;
   background: #fff;
-  color: #5b6b68;
+  color: #5b6478;
   border-radius: 999px;
   cursor: pointer;
   font-size: 0.8rem;
@@ -694,8 +694,8 @@ watch(generatedCommand, (cmd) => {
 }
 
 .filter-btn.active {
-  background: #0f6d63;
-  border-color: #0f6d63;
+  background: #1e3a5f;
+  border-color: #1e3a5f;
   color: #fff;
 }
 
@@ -707,7 +707,7 @@ watch(generatedCommand, (cmd) => {
   padding: 3px 10px;
   font-size: 0.74rem;
   border-color: #e5eaea;
-  color: #8a9895;
+  color: #8a93a3;
 }
 
 .filter-btn-sub.active {
@@ -718,10 +718,10 @@ watch(generatedCommand, (cmd) => {
 .preset-grid-wrap {
   max-height: 400px;
   overflow-y: auto;
-  border: 1px solid #d7e0de;
+  border: 1px solid #d8deea;
   border-radius: 10px;
   padding: 12px;
-  background: #f6f9f8;
+  background: #f2f5fa;
 }
 
 .preset-grid {
@@ -737,7 +737,7 @@ watch(generatedCommand, (cmd) => {
   gap: 5px;
   text-align: left;
   padding: 12px 14px;
-  border: 1px solid #d7e0de;
+  border: 1px solid #d8deea;
   background: #fff;
   border-radius: 10px;
   cursor: pointer;
@@ -745,8 +745,8 @@ watch(generatedCommand, (cmd) => {
 }
 
 .preset-card:hover {
-  border-color: #0f6d63;
-  background: #f6f9f8;
+  border-color: #1e3a5f;
+  background: #f2f5fa;
   box-shadow: 0 2px 8px rgba(20, 32, 30, 0.06);
 }
 
@@ -757,8 +757,8 @@ watch(generatedCommand, (cmd) => {
   text-transform: uppercase;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #eef2f1;
-  color: #5b6b68;
+  background: #eef1f6;
+  color: #5b6478;
 }
 
 .badge-smb {
@@ -772,8 +772,8 @@ watch(generatedCommand, (cmd) => {
 }
 
 .badge-ssh {
-  background: #eef2f1;
-  color: #0f6d63;
+  background: #eef1f6;
+  color: #1e3a5f;
 }
 
 .badge-http {
@@ -793,8 +793,8 @@ watch(generatedCommand, (cmd) => {
 
 .badge-general,
 .badge-default {
-  background: #eef2f1;
-  color: #5b6b68;
+  background: #eef1f6;
+  color: #5b6478;
 }
 
 .badge-dns {
@@ -816,14 +816,14 @@ watch(generatedCommand, (cmd) => {
 .preset-preview {
   font-family: monospace;
   font-size: 0.78rem;
-  color: #5b6b68;
+  color: #5b6478;
   word-break: break-all;
 }
 
 .command-edit {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #c3d0cd;
+  border: 1px solid #c5cedb;
   border-radius: 8px;
   font-family: monospace;
   font-size: 0.88rem;
@@ -833,7 +833,7 @@ watch(generatedCommand, (cmd) => {
 }
 
 .tok-base {
-  color: #0f6d63;
+  color: #1e3a5f;
   font-weight: 700;
 }
 
@@ -847,7 +847,7 @@ watch(generatedCommand, (cmd) => {
 }
 
 .tok-value {
-  color: #5b6b68;
+  color: #5b6478;
 }
 
 .step-label {
@@ -872,7 +872,7 @@ watch(generatedCommand, (cmd) => {
 
 .phase-btn {
   padding: 7px 16px;
-  border: 1px solid #c3d0cd;
+  border: 1px solid #c5cedb;
   background: #fff;
   border-radius: 999px;
   cursor: pointer;
@@ -881,8 +881,8 @@ watch(generatedCommand, (cmd) => {
 }
 
 .phase-btn.active {
-  background: #0f6d63;
-  border-color: #0f6d63;
+  background: #1e3a5f;
+  border-color: #1e3a5f;
   color: #fff;
 }
 
@@ -893,14 +893,14 @@ watch(generatedCommand, (cmd) => {
 .address-input {
   width: 100%;
   padding: 9px 11px;
-  border: 1px solid #c3d0cd;
+  border: 1px solid #c5cedb;
   border-radius: 8px;
   font-size: 0.9rem;
   box-sizing: border-box;
 }
 
 .empty-hint {
-  color: #5b6b68;
+  color: #5b6478;
   font-size: 0.88rem;
   margin-top: 8px;
 }
@@ -916,7 +916,7 @@ watch(generatedCommand, (cmd) => {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #8a9895;
+  color: #8a93a3;
   margin: 0 0 8px;
 }
 
@@ -932,19 +932,19 @@ watch(generatedCommand, (cmd) => {
   flex-wrap: wrap;
   gap: 6px;
   padding: 6px 10px;
-  background: #f6f9f8;
+  background: #f2f5fa;
   border: 1px solid #e5eaea;
   border-radius: 10px;
 }
 
 .option-tag {
   font-size: 0.78rem;
-  color: #5b6b68;
+  color: #5b6478;
 }
 
 .chip {
   padding: 6px 13px;
-  border: 1px solid #c3d0cd;
+  border: 1px solid #c5cedb;
   background: #fff;
   color: #14201e;
   border-radius: 999px;
@@ -955,12 +955,12 @@ watch(generatedCommand, (cmd) => {
 }
 
 .chip:hover {
-  border-color: #0f6d63;
+  border-color: #1e3a5f;
 }
 
 .chip.active {
-  background: #0f6d63;
-  border-color: #0f6d63;
+  background: #1e3a5f;
+  border-color: #1e3a5f;
   color: #fff;
 }
 
@@ -971,7 +971,7 @@ watch(generatedCommand, (cmd) => {
 
 .chip-input {
   padding: 6px 12px;
-  border: 1px solid #c3d0cd;
+  border: 1px solid #c5cedb;
   border-radius: 999px;
   font-size: 0.82rem;
   min-width: 160px;
@@ -983,7 +983,7 @@ watch(generatedCommand, (cmd) => {
   left: 0;
   margin-top: 4px;
   background: #fff;
-  border: 1px solid #d7e0de;
+  border: 1px solid #d8deea;
   border-radius: 8px;
   box-shadow: 0 6px 16px rgba(20, 32, 30, 0.12);
   min-width: 280px;
@@ -1001,7 +1001,7 @@ watch(generatedCommand, (cmd) => {
   padding: 8px 12px;
   background: none;
   border: none;
-  border-bottom: 1px solid #eef2f1;
+  border-bottom: 1px solid #eef1f6;
   text-align: left;
   cursor: pointer;
 }
@@ -1011,25 +1011,25 @@ watch(generatedCommand, (cmd) => {
 }
 
 .catalog-item:hover {
-  background: #f6f9f8;
+  background: #f2f5fa;
 }
 
 .catalog-value {
   font-family: monospace;
   font-size: 0.85rem;
-  color: #0f6d63;
+  color: #1e3a5f;
   font-weight: 600;
 }
 
 .catalog-desc {
   font-size: 0.78rem;
-  color: #5b6b68;
+  color: #5b6478;
 }
 
 .catalog-empty {
   padding: 10px 12px;
   font-size: 0.82rem;
-  color: #5b6b68;
+  color: #5b6478;
   margin: 0;
 }
 
@@ -1049,7 +1049,7 @@ watch(generatedCommand, (cmd) => {
 
 .copy-btn {
   padding: 8px 16px;
-  background: #0f6d63;
+  background: #1e3a5f;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -1058,11 +1058,11 @@ watch(generatedCommand, (cmd) => {
 }
 
 .copy-btn:hover {
-  background: #0a4f48;
+  background: #14213d;
 }
 
 .copy-btn:disabled {
-  background: #b6c4c1;
+  background: #b8c2d1;
   cursor: not-allowed;
 }
 
