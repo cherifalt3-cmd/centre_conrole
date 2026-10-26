@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { authToken } from '../auth'
+import { apiFetch } from '../api'
 
 const query = ref('')
 const submitting = ref(false)
@@ -40,12 +40,9 @@ async function launchSearch() {
   errorMessage.value = ''
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/osint/searches/', {
+    const response = await apiFetch('/api/osint/searches/', {
       method: 'POST',
-      headers: {
-        Authorization: `Token ${authToken.value}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: target }),
     })
     const data = await response.json()
@@ -65,9 +62,7 @@ async function launchSearch() {
 }
 
 async function fetchHistory() {
-  const response = await fetch('http://127.0.0.1:8000/api/osint/searches/', {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
+  const response = await apiFetch('/api/osint/searches/')
   const data = await response.json()
   history.value = data
   if (data.length) search.value = data[0]

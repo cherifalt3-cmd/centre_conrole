@@ -8,25 +8,13 @@ import Veille from './components/Veille.vue'
 import Kanban from './components/Kanban.vue'
 import Osint from './components/Osint.vue'
 import { authToken, logout } from './auth'
+import { readStored, writeStored } from './storage'
 
 const currentView = ref('dashboard')
 
-let storedVisible = true
-try {
-  const stored = localStorage.getItem('sidebarVisible')
-  storedVisible = stored === null ? true : stored === 'true'
-} catch (e) {
-  storedVisible = true
-}
-const sidebarVisible = ref(storedVisible)
+const sidebarVisible = ref(readStored('sidebarVisible') !== 'false')
 
-watch(sidebarVisible, (value) => {
-  try {
-    localStorage.setItem('sidebarVisible', value)
-  } catch (e) {
-    // localStorage indisponible (navigation privée...) - pas grave, juste pas de mémorisation
-  }
-})
+watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
 </script>
 
 <template>

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { authToken } from '../auth'
+import { apiFetch } from '../api'
 
 const targets = ref([])
 const newName = ref('')
@@ -14,6 +14,17 @@ const editName = ref('')
 const editAddress = ref('')
 const editNotes = ref('')
 
+// Le serveur explique le refus (ex : cible deja presente) : on affiche son message
+// plutot qu'un texte generique qui ne dirait pas pourquoi.
+async function serverError(response, fallback) {
+  try {
+    const data = await response.json()
+    return data.address?.[0] || fallback
+  } catch {
+    return fallback
+  }
+}
+
 function startEdit(target) {
   editingId.value = target.id
   editName.value = target.name
@@ -26,12 +37,9 @@ function cancelEdit() {
 }
 
 async function saveEdit(target) {
-  const response = await fetch(`http://127.0.0.1:8000/api/recon/targets/${target.id}/`, {
+  const response = await apiFetch(`/api/recon/targets/${target.id}/`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Token ${authToken.value}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name: editName.value,
       address: editAddress.value,
@@ -40,7 +48,7 @@ async function saveEdit(target) {
   })
 
   if (!response.ok) {
-    error.value = 'Impossible de modifier la cible.'
+    error.value = await serverError(response, 'Impossible de modifier la cible.')
     return
   }
 
@@ -57,20 +65,15 @@ async function copyAddress(target) {
 }
 
 async function fetchTargets() {
-  const response = await fetch('http://127.0.0.1:8000/api/recon/targets/', {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
+  const response = await apiFetch('/api/recon/targets/')
   targets.value = await response.json()
 }
 
 async function addTarget() {
   error.value = ''
-  const response = await fetch('http://127.0.0.1:8000/api/recon/targets/', {
+  const response = await apiFetch('/api/recon/targets/', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Token ${authToken.value}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name: newName.value,
       address: newAddress.value,
@@ -79,7 +82,7 @@ async function addTarget() {
   })
 
   if (!response.ok) {
-    error.value = "Impossible d'ajouter la cible."
+    error.value = await serverError(response, "Impossible d'ajouter la cible.")
     return
   }
 
@@ -90,10 +93,7 @@ async function addTarget() {
 }
 
 async function deleteTarget(id) {
-  await fetch(`http://127.0.0.1:8000/api/recon/targets/${id}/`, {
-    method: 'DELETE',
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
+  await apiFetch(`/api/recon/targets/${id}/`, { method: 'DELETE' })
   await fetchTargets()
 }
 

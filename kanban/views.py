@@ -4,12 +4,13 @@ from .serializers import BoardSerializer, ColumnSerializer, CardSerializer
 
 
 class BoardViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Board.objects.all()
+    # Tableau -> colonnes -> cartes : le cout croit avec le nombre de colonnes
+    queryset = Board.objects.prefetch_related('columns__cards')
     serializer_class = BoardSerializer
 
 
 class ColumnViewSet(viewsets.ModelViewSet):
-    queryset = Column.objects.all()
+    queryset = Column.objects.prefetch_related('cards')
     serializer_class = ColumnSerializer
 
 

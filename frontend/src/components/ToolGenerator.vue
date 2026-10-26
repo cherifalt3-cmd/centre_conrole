@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { authToken } from '../auth'
+import { apiFetch } from '../api'
 
 const tools = ref([])
 const presets = ref([])
@@ -42,16 +42,12 @@ function selectCatalogEntry(optionId, value) {
 }
 
 async function fetchTools() {
-  const response = await fetch('http://127.0.0.1:8000/api/recon/tools/', {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
+  const response = await apiFetch('/api/recon/tools/')
   tools.value = await response.json()
 }
 
 async function fetchPresets() {
-  const response = await fetch('http://127.0.0.1:8000/api/recon/command-presets/', {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
+  const response = await apiFetch('/api/recon/command-presets/')
   presets.value = await response.json()
 }
 

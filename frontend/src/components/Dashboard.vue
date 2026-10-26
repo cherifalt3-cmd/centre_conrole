@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { authToken } from '../auth'
+import { apiFetch } from '../api'
 import Kanban from './Kanban.vue'
 
 const emit = defineEmits(['navigate'])
@@ -8,32 +8,26 @@ const emit = defineEmits(['navigate'])
 const targets = ref([])
 const loaded = ref(false)
 
-const articles = ref([])
-const articlesLoaded = ref(false)
+// La tuile n'a besoin que de trois chiffres : on les demande directement au lieu
+// de telecharger toute la liste des articles pour les compter.
+const veilleStats = ref(null)
 
 const kanbanBoard = ref(null)
 const kanbanLoaded = ref(false)
 
 async function fetchTargets() {
-  const response = await fetch('http://127.0.0.1:8000/api/recon/targets/', {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
+  const response = await apiFetch('/api/recon/targets/')
   targets.value = await response.json()
   loaded.value = true
 }
 
-async function fetchArticles() {
-  const response = await fetch('http://127.0.0.1:8000/api/veille/articles/', {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
-  articles.value = await response.json()
-  articlesLoaded.value = true
+async function fetchVeilleStats() {
+  const response = await apiFetch('/api/veille/articles/stats/')
+  veilleStats.value = await response.json()
 }
 
 async function fetchKanban() {
-  const response = await fetch('http://127.0.0.1:8000/api/kanban/boards/', {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
+  const response = await apiFetch('/api/kanban/boards/')
   const boards = await response.json()
   kanbanBoard.value = boards.length ? boards[0] : null
   kanbanLoaded.value = true
@@ -41,16 +35,17 @@ async function fetchKanban() {
 
 onMounted(() => {
   fetchTargets()
-  fetchArticles()
+  fetchVeilleStats()
   fetchKanban()
 })
 
 const targetCount = computed(() => targets.value.length)
 const lastTarget = computed(() => (targets.value.length ? targets.value[0] : null))
 
-const articleCount = computed(() => articles.value.length)
-const lastArticle = computed(() => (articles.value.length ? articles.value[0] : null))
-const criticalCount = computed(() => articles.value.filter((a) => a.severity === 'critical').length)
+const articlesLoaded = computed(() => veilleStats.value !== null)
+const articleCount = computed(() => veilleStats.value?.total ?? 0)
+const criticalCount = computed(() => veilleStats.value?.critical ?? 0)
+const lastArticleTitle = computed(() => veilleStats.value?.latest_title || '')
 
 const kanbanCardCount = computed(() => {
   if (!kanbanBoard.value) return 0
@@ -175,7 +170,7 @@ const kanbanInProgressCount = computed(() => {
           <span class="alert-dot"></span>
           {{ criticalCount }} faille{{ criticalCount === 1 ? '' : 's' }} critique{{ criticalCount === 1 ? '' : 's' }}
         </p>
-        <p v-else-if="lastArticle" class="tile-detail">{{ lastArticle.title }}</p>
+        <p v-else-if="lastArticleTitle" class="tile-detail">{{ lastArticleTitle }}</p>
         <p v-else-if="articlesLoaded" class="tile-detail tile-empty">Clique "Actualiser" pour aller chercher des articles</p>
       </button>
 

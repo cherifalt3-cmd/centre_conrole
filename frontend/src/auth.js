@@ -1,10 +1,12 @@
 import { ref } from 'vue'
+import { API_BASE } from './config'
+import { readStored, writeStored, removeStored } from './storage'
 
 // Au démarrage de l'app, on relit le jeton déjà sauvegardé (s'il y en a un) pour rester connecté
-export const authToken = ref(localStorage.getItem('authToken'))
+export const authToken = ref(readStored('authToken'))
 
 export async function login(username, password) {
-  const response = await fetch('http://127.0.0.1:8000/api-token-auth/', {
+  const response = await fetch(`${API_BASE}/api-token-auth/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -18,10 +20,10 @@ export async function login(username, password) {
 
   const data = await response.json()
   authToken.value = data.token
-  localStorage.setItem('authToken', data.token)
+  writeStored('authToken', data.token)
 }
 
 export function logout() {
   authToken.value = null
-  localStorage.removeItem('authToken')
+  removeStored('authToken')
 }

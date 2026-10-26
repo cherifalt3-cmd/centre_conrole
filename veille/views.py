@@ -1,6 +1,5 @@
 import logging
 import re
-import socket
 from datetime import datetime, timezone as dt_timezone
 
 import feedparser
@@ -8,6 +7,7 @@ import requests
 from django.conf import settings
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -25,6 +25,10 @@ SUMMARY_PROMPT = (
 
 # Au-dela, on gaspille des tokens sur le pied de page et les menus du site
 MAX_ARTICLE_CHARS = 6000
+
+FEED_TIMEOUT = 10
+# Certains flux refusent le user-agent par defaut de requests
+FEED_HEADERS = {'User-Agent': 'Mozilla/5.0 (centre-controle; lecteur RSS)'}
 
 
 class SourceViewSet(viewsets.ReadOnlyModelViewSet):
@@ -57,9 +61,42 @@ def fetch_article_text(url):
     return extract_page_text(response.text)
 
 
+class ArticlePagination(PageNumberPagination):
+    page_size = 30
+
+
 class ArticleViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Article.objects.all()
+    # Attribut de classe a conserver meme avec get_queryset() : le routeur DRF y lit
+    # le modele pour nommer la route, et sans lui le serveur ne demarre plus.
+    # select_related : le serialiseur lit source.name et source.category pour
+    # chaque article ; sans jointure, c'etait 271 requetes pour 112 articles.
+    queryset = Article.objects.select_related('source')
     serializer_class = ArticleSerializer
+    pagination_class = ArticlePagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # Les filtres doivent s'appliquer cote serveur : filtrer une page deja
+        # paginee ne chercherait que dans les 30 articles charges.
+        category = self.request.query_params.get('category')
+        severity = self.request.query_params.get('severity')
+        if category:
+            queryset = queryset.filter(source__category=category)
+        if severity:
+            queryset = queryset.filter(severity=severity)
+        return queryset
+
+    @action(detail=False)
+    def stats(self, request):
+        """Les trois chiffres dont la tuile du tableau de bord a besoin, sans lui
+        envoyer la liste complete des articles."""
+        latest = Article.objects.values('title').first()
+        return Response({
+            'total': Article.objects.count(),
+            'critical': Article.objects.filter(severity='critical').count(),
+            'latest_title': latest['title'] if latest else '',
+        })
 
     @action(detail=True, methods=['post'])
     def summarize(self, request, pk=None):
@@ -143,42 +180,51 @@ class RefreshFeedsView(APIView):
         created_count = 0
         failed_sources = []
 
-        # Empêche un flux lent/bloqué de faire attendre la requête indéfiniment
-        previous_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(10)
-
         for source in Source.objects.all():
             try:
-                parsed = feedparser.parse(source.url)
+                created_count += self._import_source(source)
             except Exception:
+                logger.exception("Echec de l'actualisation de la source %s", source.name)
                 failed_sources.append(source.name)
-                continue
-
-            for entry in parsed.entries:
-                link = entry.get('link')
-                if not link:
-                    continue
-
-                published_at = None
-                if entry.get('published_parsed'):
-                    published_at = datetime(*entry.published_parsed[:6], tzinfo=dt_timezone.utc)
-
-                title = strip_html(entry.get('title', ''))
-                summary = strip_html(entry.get('summary', ''))
-
-                _, created = Article.objects.get_or_create(
-                    link=link,
-                    defaults={
-                        'source': source,
-                        'title': title,
-                        'summary': summary,
-                        'severity': detect_severity(f'{title} {summary}'),
-                        'published_at': published_at,
-                    },
-                )
-                if created:
-                    created_count += 1
-
-        socket.setdefaulttimeout(previous_timeout)
 
         return Response({'created': created_count, 'failed_sources': failed_sources})
+
+    def _import_source(self, source):
+        """Recupere un flux et enregistre ses nouveaux articles.
+
+        Le telechargement passe par requests et non par feedparser, qui n'offre
+        aucun timeout : la seule facon de l'en doter serait socket.setdefaulttimeout,
+        qui modifie l'etat de tout le processus et affecterait les requetes
+        concurrentes des autres modules.
+        """
+        response = requests.get(source.url, timeout=FEED_TIMEOUT, headers=FEED_HEADERS)
+        response.raise_for_status()
+        parsed = feedparser.parse(response.content)
+
+        created_count = 0
+        for entry in parsed.entries:
+            link = entry.get('link')
+            if not link:
+                continue
+
+            published_at = None
+            if entry.get('published_parsed'):
+                published_at = datetime(*entry.published_parsed[:6], tzinfo=dt_timezone.utc)
+
+            title = strip_html(entry.get('title', ''))
+            summary = strip_html(entry.get('summary', ''))
+
+            _, created = Article.objects.get_or_create(
+                link=link,
+                defaults={
+                    'source': source,
+                    'title': title,
+                    'summary': summary,
+                    'severity': detect_severity(f'{title} {summary}'),
+                    'published_at': published_at,
+                },
+            )
+            if created:
+                created_count += 1
+
+        return created_count

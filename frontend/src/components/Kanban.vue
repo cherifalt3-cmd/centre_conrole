@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { authToken } from '../auth'
+import { apiFetch } from '../api'
 
 const board = ref(null)
 const loading = ref(false)
@@ -8,9 +8,7 @@ const newCardTitle = reactive({})
 
 async function fetchBoard() {
   loading.value = true
-  const response = await fetch('http://127.0.0.1:8000/api/kanban/boards/', {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
+  const response = await apiFetch('/api/kanban/boards/')
   const boards = await response.json()
   board.value = boards.length ? boards[0] : null
   loading.value = false
@@ -18,17 +16,21 @@ async function fetchBoard() {
 
 onMounted(fetchBoard)
 
+// Le nombre de cartes ne convient pas comme rang : apres une suppression, une
+// colonne aux rangs 0 et 2 en compte deux, et la nouvelle carte recevrait le 2,
+// deja pris. On part du rang le plus eleve.
+function nextOrder(column) {
+  return column.cards.reduce((highest, card) => Math.max(highest, card.order), -1) + 1
+}
+
 async function addCard(column) {
   const title = (newCardTitle[column.id] || '').trim()
   if (!title) return
 
-  await fetch('http://127.0.0.1:8000/api/kanban/cards/', {
+  await apiFetch('/api/kanban/cards/', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Token ${authToken.value}`,
-    },
-    body: JSON.stringify({ column: column.id, title, order: column.cards.length }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ column: column.id, title, order: nextOrder(column) }),
   })
 
   newCardTitle[column.id] = ''
@@ -36,10 +38,7 @@ async function addCard(column) {
 }
 
 async function deleteCard(cardId) {
-  await fetch(`http://127.0.0.1:8000/api/kanban/cards/${cardId}/`, {
-    method: 'DELETE',
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
+  await apiFetch(`/api/kanban/cards/${cardId}/`, { method: 'DELETE' })
   await fetchBoard()
 }
 
@@ -51,13 +50,10 @@ async function moveCard(card, direction) {
 
   const targetColumn = columns[targetIndex]
 
-  await fetch(`http://127.0.0.1:8000/api/kanban/cards/${card.id}/`, {
+  await apiFetch(`/api/kanban/cards/${card.id}/`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Token ${authToken.value}`,
-    },
-    body: JSON.stringify({ column: targetColumn.id, order: targetColumn.cards.length }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ column: targetColumn.id, order: nextOrder(targetColumn) }),
   })
 
   await fetchBoard()

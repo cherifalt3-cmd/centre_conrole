@@ -3,7 +3,7 @@ from django.db import models
 
 class Target(models.Model):
     name = models.CharField(max_length=255, blank=True, help_text="Nom donné à la cible (facultatif)")
-    address = models.CharField(max_length=255, help_text="Adresse IP ou domaine")
+    address = models.CharField(max_length=255, unique=True, help_text="Adresse IP ou domaine")
     date_added = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
 
@@ -104,7 +104,10 @@ class CommandPreset(models.Model):
     phase = models.CharField(max_length=10, choices=Tool.PHASE_CHOICES)
     template = models.CharField(
         max_length=255,
-        help_text="Utilise {address} pour représenter la cible, ex : nmap -F {address}",
+        help_text=(
+            "Utilise {address} pour une IP et {domain} pour un nom de domaine, "
+            "ex : nmap -F {address} ou dig {domain} ANY"
+        ),
     )
     order = models.PositiveIntegerField(default=0)
 

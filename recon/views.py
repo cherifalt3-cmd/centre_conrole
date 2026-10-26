@@ -9,7 +9,12 @@ class TargetViewSet(viewsets.ModelViewSet):
 
 
 class ToolViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Tool.objects.all()
+    # Le serialiseur descend outil -> options -> choix et options -> catalogue ->
+    # entrees : sans prechargement, une requete par niveau et par objet.
+    queryset = Tool.objects.prefetch_related(
+        'options__choices',
+        'options__catalog__entries',
+    )
     serializer_class = ToolSerializer
 
 

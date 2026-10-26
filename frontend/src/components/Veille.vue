@@ -1,9 +1,13 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { authToken } from '../auth'
+import { ref, watch, onMounted } from 'vue'
+import { apiFetch } from '../api'
 
 const articles = ref([])
+const totalCount = ref(0)
+const page = ref(1)
+const hasMore = ref(false)
 const loading = ref(false)
+const loadingMore = ref(false)
 const refreshing = ref(false)
 const activeCategory = ref(null)
 const activeSeverity = ref(null)
@@ -18,25 +22,65 @@ const SEVERITY_LABELS = {
   low: 'Faible',
 }
 
+function articlesPath(pageNumber) {
+  const params = new URLSearchParams({ page: pageNumber })
+  if (activeCategory.value) params.set('category', activeCategory.value)
+  if (activeSeverity.value) params.set('severity', activeSeverity.value)
+  return `/api/veille/articles/?${params}`
+}
+
+// Deux clics rapides sur les filtres lancent deux requetes : la plus lente peut
+// arriver en dernier et afficher les resultats du mauvais filtre. Seule la
+// reponse a la requete la plus recente est conservee.
+let latestRequest = 0
+
 async function fetchArticles() {
+  const request = ++latestRequest
   loading.value = true
-  const response = await fetch('http://127.0.0.1:8000/api/veille/articles/', {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
-  articles.value = await response.json()
-  loading.value = false
+  try {
+    const response = await apiFetch(articlesPath(1))
+    const data = await response.json()
+    if (request !== latestRequest) return
+    articles.value = data.results
+    totalCount.value = data.count
+    hasMore.value = Boolean(data.next)
+    page.value = 1
+  } finally {
+    if (request === latestRequest) loading.value = false
+  }
+}
+
+async function loadMore() {
+  const request = latestRequest
+  loadingMore.value = true
+  try {
+    const response = await apiFetch(articlesPath(page.value + 1))
+    const data = await response.json()
+    if (request !== latestRequest) return
+    articles.value.push(...data.results)
+    hasMore.value = Boolean(data.next)
+    page.value += 1
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+// Les filtres sont appliques par le serveur : en changer recharge la premiere page
+watch([activeCategory, activeSeverity], fetchArticles)
+
+function describeRefresh(created) {
+  if (created === 0) return 'Aucun nouvel article'
+  return created === 1 ? '1 nouvel article' : `${created} nouveaux articles`
 }
 
 async function refresh() {
   refreshing.value = true
   lastRefreshInfo.value = ''
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/veille/refresh/', {
-      method: 'POST',
-      headers: { Authorization: `Token ${authToken.value}` },
-    })
+    const response = await apiFetch('/api/veille/refresh/', { method: 'POST' })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const data = await response.json()
-    let info = `${data.created} nouvel${data.created === 1 ? '' : 'le'}${data.created === 1 ? '' : 's'} article${data.created === 1 ? '' : 's'}`
+    let info = describeRefresh(data.created)
     if (data.failed_sources?.length) {
       info += ` (échec : ${data.failed_sources.join(', ')})`
     }
@@ -53,10 +97,9 @@ async function summarize(article) {
   summarizingId.value = article.id
   summarizeError.value = ''
   try {
-    const response = await fetch(
-      `http://127.0.0.1:8000/api/veille/articles/${article.id}/summarize/`,
-      { method: 'POST', headers: { Authorization: `Token ${authToken.value}` } },
-    )
+    const response = await apiFetch(`/api/veille/articles/${article.id}/summarize/`, {
+      method: 'POST',
+    })
     const data = await response.json()
 
     if (!response.ok) {
@@ -74,17 +117,6 @@ async function summarize(article) {
 }
 
 onMounted(fetchArticles)
-
-const filteredArticles = computed(() => {
-  let list = articles.value
-  if (activeCategory.value) {
-    list = list.filter((a) => a.source_category === activeCategory.value)
-  }
-  if (activeSeverity.value) {
-    list = list.filter((a) => a.severity === activeSeverity.value)
-  }
-  return list
-})
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -160,14 +192,20 @@ function formatDate(iso) {
     </div>
 
     <p v-if="loading" class="empty-hint">Chargement...</p>
-    <p v-else-if="filteredArticles.length === 0" class="empty-hint">
-      Aucun article pour l'instant — clique "Actualiser" pour aller chercher les derniers.
+    <p v-else-if="articles.length === 0" class="empty-hint">
+      <template v-if="activeCategory || activeSeverity">Aucun article pour ces filtres.</template>
+      <template v-else>
+        Aucun article pour l'instant — clique "Actualiser" pour aller chercher les derniers.
+      </template>
+    </p>
+    <p v-else class="result-count tabular">
+      {{ articles.length }} sur {{ totalCount }} article{{ totalCount === 1 ? '' : 's' }}
     </p>
 
     <p v-if="summarizeError" class="summarize-error">{{ summarizeError }}</p>
 
     <div class="article-list">
-      <div v-for="article in filteredArticles" :key="article.id" class="article-card">
+      <div v-for="article in articles" :key="article.id" class="article-card">
         <div class="article-meta">
           <span :class="['source-badge', article.source_category === 'ai' ? 'badge-ai' : 'badge-cyber']">
             {{ article.source_name }}
@@ -201,6 +239,12 @@ function formatDate(iso) {
           </button>
         </div>
       </div>
+    </div>
+
+    <div v-if="hasMore" class="load-more">
+      <button type="button" class="load-more-btn" :disabled="loadingMore" @click="loadMore">
+        {{ loadingMore ? 'Chargement...' : 'Charger plus' }}
+      </button>
     </div>
   </div>
 </template>
@@ -600,5 +644,41 @@ function formatDate(iso) {
   color: var(--danger);
   font-size: 0.85rem;
   margin-bottom: 14px;
+}
+
+.result-count {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+.load-more-btn {
+  padding: 9px 22px;
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  cursor: pointer;
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--text);
+}
+
+.load-more-btn:disabled {
+  cursor: progress;
+  color: var(--text-faint);
 }
 </style>

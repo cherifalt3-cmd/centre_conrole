@@ -8,6 +8,23 @@ class TargetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Target
         fields = ['id', 'name', 'address', 'date_added', 'notes']
+        # Le validateur d'unicite automatique de DRF s'execute avant
+        # validate_address, donc sur la valeur brute : il laisserait passer
+        # « Exemple.com » et la base leverait une IntegrityError (erreur 500).
+        extra_kwargs = {'address': {'validators': []}}
+
+    def validate_address(self, value):
+        # Espaces et casse seulement : les domaines ne sont pas sensibles a la
+        # casse. On ne retire ni schema ni chemin, une URL precise peut etre voulue.
+        normalized = value.strip().lower()
+
+        duplicates = Target.objects.filter(address=normalized)
+        if self.instance is not None:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise serializers.ValidationError('Cette cible est déjà dans le carnet.')
+
+        return normalized
 
 
 class ToolOptionChoiceSerializer(serializers.ModelSerializer):
