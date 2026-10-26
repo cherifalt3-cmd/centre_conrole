@@ -340,12 +340,14 @@ watch(sidebarVisible, (value) => {
 }
 
 .sidebar-logo {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   flex-shrink: 0;
-  border-radius: 9px;
-  box-shadow: 0 0 0 1px var(--border), 0 4px 18px rgba(124, 108, 245, 0.25);
+  /* l'embleme est circulaire : le halo suit le cercle, un cadre carre laisserait
+     voir ses coins vides */
+  border-radius: 50%;
+  box-shadow: 0 2px 14px rgba(124, 108, 245, 0.3);
 }
 
 /* garde-fou : un libellé long est tronqué au lieu de déborder du panneau */

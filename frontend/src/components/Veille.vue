@@ -8,6 +8,8 @@ const refreshing = ref(false)
 const activeCategory = ref(null)
 const activeSeverity = ref(null)
 const lastRefreshInfo = ref('')
+const summarizingId = ref(null)
+const summarizeError = ref('')
 
 const SEVERITY_LABELS = {
   critical: 'Critique',
@@ -44,6 +46,30 @@ async function refresh() {
     lastRefreshInfo.value = "Échec de l'actualisation, réessaie."
   } finally {
     refreshing.value = false
+  }
+}
+
+async function summarize(article) {
+  summarizingId.value = article.id
+  summarizeError.value = ''
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/api/veille/articles/${article.id}/summarize/`,
+      { method: 'POST', headers: { Authorization: `Token ${authToken.value}` } },
+    )
+    const data = await response.json()
+
+    if (!response.ok) {
+      summarizeError.value = data.error || 'Échec du résumé.'
+      return
+    }
+
+    const index = articles.value.findIndex((a) => a.id === article.id)
+    if (index !== -1) articles.value[index] = data
+  } catch (e) {
+    summarizeError.value = 'Impossible de contacter le serveur.'
+  } finally {
+    summarizingId.value = null
   }
 }
 
@@ -138,15 +164,10 @@ function formatDate(iso) {
       Aucun article pour l'instant — clique "Actualiser" pour aller chercher les derniers.
     </p>
 
+    <p v-if="summarizeError" class="summarize-error">{{ summarizeError }}</p>
+
     <div class="article-list">
-      <a
-        v-for="article in filteredArticles"
-        :key="article.id"
-        :href="article.link"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="article-card"
-      >
+      <div v-for="article in filteredArticles" :key="article.id" class="article-card">
         <div class="article-meta">
           <span :class="['source-badge', article.source_category === 'ai' ? 'badge-ai' : 'badge-cyber']">
             {{ article.source_name }}
@@ -156,9 +177,30 @@ function formatDate(iso) {
           </span>
           <span class="article-date">{{ formatDate(article.published_at) }}</span>
         </div>
-        <p class="article-title">{{ article.title }}</p>
-        <p v-if="article.summary" class="article-summary">{{ article.summary }}</p>
-      </a>
+
+        <a :href="article.link" target="_blank" rel="noopener noreferrer" class="article-title">
+          {{ article.title }}
+        </a>
+
+        <p v-if="article.ai_summary" class="article-summary article-summary-ai">
+          {{ article.ai_summary }}
+        </p>
+        <p v-else-if="article.summary" class="article-summary">{{ article.summary }}</p>
+
+        <div class="article-actions">
+          <span v-if="article.ai_summary" class="ai-badge">Résumé en français</span>
+          <button
+            v-else
+            type="button"
+            class="summarize-btn"
+            :disabled="summarizingId === article.id"
+            @click="summarize(article)"
+          >
+            <span v-if="summarizingId === article.id" class="summarize-spinner"></span>
+            {{ summarizingId === article.id ? 'Résumé...' : 'Résumer' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -464,11 +506,18 @@ function formatDate(iso) {
 }
 
 .article-title {
+  display: block;
   margin: 0 0 7px;
   font-weight: 600;
   font-size: 0.93rem;
   line-height: 1.45;
   color: var(--text);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.article-title:hover {
+  color: var(--accent-2);
 }
 
 .article-summary {
@@ -480,5 +529,76 @@ function formatDate(iso) {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* le resume genere est l'information utile : pas de troncature, et mis en avant */
+.article-summary-ai {
+  display: block;
+  color: var(--text);
+  border-left: 2px solid var(--accent-line);
+  padding-left: 10px;
+}
+
+.article-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 11px;
+}
+
+.summarize-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px;
+  background: var(--glass-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.summarize-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+
+.summarize-btn:disabled {
+  cursor: progress;
+  color: var(--text-faint);
+}
+
+.summarize-spinner {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.ai-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.summarize-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-bottom: 14px;
 }
 </style>

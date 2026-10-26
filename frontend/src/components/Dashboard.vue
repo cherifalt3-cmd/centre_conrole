@@ -147,8 +147,8 @@ const kanbanInProgressCount = computed(() => {
             <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <p class="tile-stat"><span class="tile-unit">Domaine → emails &amp; réseaux</span></p>
-        <p class="tile-detail">Recherche active via Scrapy Cloud</p>
+        <p class="tile-stat"><span class="tile-unit">Domaine → empreinte publique</span></p>
+        <p class="tile-detail">Passif : la cible n'est jamais contactée</p>
       </button>
 
       <button type="button" class="tile tile-active" @click="emit('navigate', 'veille')">

@@ -20,8 +20,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Charge les variables du fichier .env (clés API, secrets...) dans les variables d'environnement
 load_dotenv(BASE_DIR / '.env')
 
-SCRAPY_CLOUD_API_KEY = os.environ.get('SCRAPY_CLOUD_API_KEY', '')
-SCRAPY_CLOUD_PROJECT_ID = os.environ.get('SCRAPY_CLOUD_PROJECT_ID', '')
+# Resume d'articles par modele NVIDIA (API compatible OpenAI).
+# Le nom du modele vit dans .env : NVIDIA retire regulierement des identifiants.
+NVIDIA_API_KEY = os.environ.get('NVIDIA_API_KEY', '')
+NVIDIA_MODEL = os.environ.get('NVIDIA_MODEL', '')
 
 
 # Quick-start development settings - unsuitable for production

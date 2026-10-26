@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { authToken } from '../auth'
 
 const query = ref('')
@@ -8,27 +8,28 @@ const errorMessage = ref('')
 const search = ref(null)
 const history = ref([])
 
-let pollTimer = null
-
-function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
-  }
+const SOURCE_LABELS = {
+  subdomains: 'Sous-domaines',
+  dns: 'DNS',
+  ipRanges: 'Plages d\'adresses',
+  asPrefixes: 'Espace d\'adressage annoncé',
+  whois: 'Enregistrement du domaine',
+  wayback: 'Historique des URLs',
 }
 
-async function pollSearch(id) {
-  const response = await fetch(`http://127.0.0.1:8000/api/osint/searches/${id}/`, {
-    headers: { Authorization: `Token ${authToken.value}` },
-  })
-  const data = await response.json()
-  search.value = data
-
-  if (data.status === 'finished' || data.status === 'failed') {
-    stopPolling()
-    const idx = history.value.findIndex((s) => s.id === data.id)
-    if (idx !== -1) history.value[idx] = data
-  }
+const WHOIS_LABELS = {
+  registrar: 'Registrar',
+  registrant: 'Titulaire',
+  admin_name: 'Contact admin',
+  admin_email: 'Email admin',
+  tech_name: 'Contact technique',
+  tech_email: 'Email technique',
+  created: 'Créé le',
+  expires: 'Expire le',
+  updated: 'Modifié le',
+  statuses: 'Statuts',
+  nameservers: 'Serveurs de noms',
+  source: 'Source',
 }
 
 async function launchSearch() {
@@ -37,7 +38,6 @@ async function launchSearch() {
 
   submitting.value = true
   errorMessage.value = ''
-  stopPolling()
 
   try {
     const response = await fetch('http://127.0.0.1:8000/api/osint/searches/', {
@@ -51,16 +51,12 @@ async function launchSearch() {
     const data = await response.json()
 
     if (!response.ok) {
-      errorMessage.value = data.error || "Échec du lancement de la recherche."
+      errorMessage.value = data.error || "Échec de la recherche."
       return
     }
 
     search.value = data
     history.value.unshift(data)
-
-    if (data.status === 'running') {
-      pollTimer = setInterval(() => pollSearch(data.id), 4000)
-    }
   } catch (e) {
     errorMessage.value = "Impossible de contacter le serveur."
   } finally {
@@ -74,35 +70,54 @@ async function fetchHistory() {
   })
   const data = await response.json()
   history.value = data
-
-  if (data.length) {
-    search.value = data[0]
-    if (data[0].status === 'running') {
-      pollTimer = setInterval(() => pollSearch(data[0].id), 4000)
-    }
-  }
+  if (data.length) search.value = data[0]
 }
 
 onMounted(fetchHistory)
-onBeforeUnmount(stopPolling)
 
-const statusLabels = {
-  pending: 'En attente',
-  running: 'Recherche en cours',
-  finished: 'Terminé',
-  failed: 'Échec',
+const findings = computed(() => search.value?.findings || {})
+const subdomains = computed(() => findings.value.subdomains || [])
+const dns = computed(() => findings.value.dns || {})
+const ipRanges = computed(() => findings.value.ip_ranges || [])
+const asPrefixes = computed(() => findings.value.as_prefixes || [])
+const whois = computed(() => findings.value.whois || null)
+const wayback = computed(() => findings.value.wayback || [])
+
+const hasAnything = computed(
+  () =>
+    subdomains.value.length ||
+    Object.keys(dns.value).length ||
+    ipRanges.value.length ||
+    asPrefixes.value.length ||
+    whois.value ||
+    wayback.value.length,
+)
+
+function formatDate(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  })
 }
 
-const resultCount = computed(() => (search.value?.results || []).length)
+function whoisValue(value) {
+  if (Array.isArray(value)) return value.join(', ')
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return new Date(value).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+  return value
+}
 </script>
 
 <template>
   <div class="osint">
     <div class="osint-header">
-      <p class="eyebrow">Reconnaissance active</p>
+      <p class="eyebrow">Reconnaissance passive</p>
       <h2 class="osint-title">OSINT automatique</h2>
       <p class="osint-subtitle">
-        Donne un domaine — l'app explore le site et remonte emails et liens sociaux trouvés.
+        Donne un domaine. L'app interroge des sources tierces qui détiennent déjà
+        l'information publique — <strong>la cible n'est jamais contactée</strong> et rien
+        n'apparaît dans ses journaux.
       </p>
     </div>
 
@@ -112,77 +127,152 @@ const resultCount = computed(() => (search.value?.results || []).length)
           <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
           <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
-        <input
-          v-model="query"
-          type="text"
-          class="osint-input"
-          placeholder="exemple.com"
-          :disabled="submitting"
-        />
+        <input v-model="query" type="text" class="osint-input" placeholder="exemple.com" :disabled="submitting" />
       </span>
       <button type="submit" class="osint-submit" :disabled="submitting || !query.trim()">
-        {{ submitting ? 'Lancement...' : 'Lancer la recherche' }}
+        <span v-if="submitting" class="spinner"></span>
+        {{ submitting ? 'Recherche...' : 'Analyser' }}
       </button>
     </form>
 
     <p v-if="errorMessage" class="osint-error">{{ errorMessage }}</p>
 
-    <div v-if="search" class="osint-result">
-      <div class="osint-result-head">
-        <span class="osint-result-query">{{ search.query }}</span>
-        <span :class="['osint-status', 'status-' + search.status]">
-          <span v-if="search.status === 'running'" class="status-spinner"></span>
-          {{ statusLabels[search.status] }}
-        </span>
+    <template v-if="search">
+      <div class="result-head">
+        <span class="result-query">{{ search.query }}</span>
+        <span class="result-date">{{ formatDate(search.created_at) }}</span>
       </div>
 
-      <p v-if="search.status === 'running'" class="empty-hint">
-        Exploration du site en cours, ça peut prendre quelques dizaines de secondes...
-      </p>
-      <p v-else-if="search.error_message" class="empty-hint osint-error-inline">
-        {{ search.error_message }}
-      </p>
-      <p v-else-if="search.status === 'failed'" class="empty-hint">
-        La recherche a échoué. Vérifie le domaine et réessaie.
-      </p>
-      <p v-else-if="search.status === 'finished' && resultCount === 0" class="empty-hint">
-        Aucun email ni lien social trouvé sur ce domaine.
+      <p v-if="search.error_message" class="osint-warning">{{ search.error_message }}</p>
+      <p v-if="!hasAnything && !search.error_message" class="empty-hint">
+        Aucune information publique trouvée pour ce domaine.
       </p>
 
-      <div v-if="resultCount > 0" class="osint-pages">
-        <div v-for="(page, i) in search.results" :key="i" class="osint-page">
-          <p class="osint-page-url">{{ page.url }}</p>
-          <div v-if="page.emails?.length" class="osint-page-row">
-            <span class="osint-tag-label">Emails</span>
-            <div class="osint-tags">
-              <span v-for="email in page.emails" :key="email" class="osint-tag osint-tag-email">{{ email }}</span>
+      <div class="panels">
+        <section v-if="subdomains.length" class="panel">
+          <div class="panel-head">
+            <span class="panel-title">{{ SOURCE_LABELS.subdomains }}</span>
+            <span class="panel-count tabular">{{ subdomains.length }}</span>
+          </div>
+          <p class="panel-note">Issus des certificats TLS publics (Certificate Transparency)</p>
+          <div class="panel-scroll panel-scroll-chips">
+            <span v-for="name in subdomains" :key="name" class="chip">{{ name }}</span>
+          </div>
+        </section>
+
+        <section v-if="Object.keys(dns).length" class="panel">
+          <div class="panel-head">
+            <span class="panel-title">{{ SOURCE_LABELS.dns }}</span>
+          </div>
+          <p class="panel-note">Via un résolveur public, pas les serveurs de la cible</p>
+          <div class="panel-scroll">
+            <div v-for="(values, type) in dns" :key="type" class="record">
+              <span class="record-type">{{ type }}</span>
+              <div class="record-values">
+                <code v-for="value in values" :key="value" class="record-value">{{ value }}</code>
+              </div>
             </div>
           </div>
-          <div v-if="page.social_links?.length" class="osint-page-row">
-            <span class="osint-tag-label">Réseaux</span>
-            <div class="osint-tags">
-              <a
-                v-for="link in page.social_links"
-                :key="link"
-                :href="link"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="osint-tag osint-tag-social"
-              >
-                {{ link }}
-              </a>
+        </section>
+
+        <section v-if="ipRanges.length" class="panel">
+          <div class="panel-head">
+            <span class="panel-title">{{ SOURCE_LABELS.ipRanges }}</span>
+            <span class="panel-count tabular">{{ ipRanges.length }}</span>
+          </div>
+          <p class="panel-note">
+            Préfixes BGP et systèmes autonomes, via Team Cymru — indique si la cible
+            a son propre espace d'adressage ou passe par un hébergeur
+          </p>
+          <div class="panel-scroll">
+            <div v-for="block in ipRanges" :key="block.prefix" class="range">
+              <div class="range-head">
+                <code class="range-prefix">{{ block.prefix }}</code>
+                <span class="range-asn">AS{{ block.asn }}</span>
+                <span v-if="block.country" class="range-country">{{ block.country }}</span>
+              </div>
+              <p class="range-org">{{ block.as_name }}</p>
+              <p class="range-meta">
+                <span v-if="block.registry">{{ block.registry }}</span>
+                <span v-if="block.allocated">alloué le {{ block.allocated }}</span>
+                <span>{{ block.ips.join(', ') }}</span>
+              </p>
             </div>
           </div>
-        </div>
+        </section>
+
+        <section v-if="asPrefixes.length" class="panel">
+          <div class="panel-head">
+            <span class="panel-title">{{ SOURCE_LABELS.asPrefixes }}</span>
+          </div>
+          <p class="panel-note">
+            Tous les préfixes annoncés en BGP par ces AS, via Hurricane Electric —
+            l'espace complet de l'organisation, pas seulement le bloc du domaine
+          </p>
+          <div v-for="block in asPrefixes" :key="block.asn" class="as-block">
+            <div class="as-block-head">
+              <span class="range-asn">AS{{ block.asn }}</span>
+              <span class="as-block-count tabular">
+                {{ block.prefixes.length }} préfixe{{ block.prefixes.length === 1 ? '' : 's' }}
+              </span>
+            </div>
+            <div class="panel-scroll panel-scroll-chips">
+              <code v-for="prefix in block.prefixes" :key="prefix" class="prefix-chip">
+                {{ prefix }}
+              </code>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="whois" class="panel">
+          <div class="panel-head">
+            <span class="panel-title">{{ SOURCE_LABELS.whois }}</span>
+          </div>
+          <p class="panel-note">RDAP, le WHOIS structuré des registres</p>
+          <div class="panel-scroll">
+            <template v-for="(label, key) in WHOIS_LABELS" :key="key">
+              <div v-if="whois[key] && whois[key].length !== 0" class="record">
+                <span class="record-type record-type-wide">{{ label }}</span>
+                <div class="record-values">
+                  <span class="whois-value">{{ whoisValue(whois[key]) }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <section v-if="wayback.length" class="panel panel-wide">
+          <div class="panel-head">
+            <span class="panel-title">{{ SOURCE_LABELS.wayback }}</span>
+            <span class="panel-count tabular">{{ wayback.length }}</span>
+          </div>
+          <p class="panel-note">
+            URLs archivées par Archive.org — révèle d'anciens endpoints et fichiers exposés
+          </p>
+          <div class="url-list">
+            <a
+              v-for="url in wayback"
+              :key="url"
+              :href="url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="url-item"
+            >
+              {{ url }}
+            </a>
+          </div>
+        </section>
       </div>
-    </div>
+    </template>
 
     <div v-if="history.length > 1" class="osint-history">
       <p class="eyebrow">Recherches précédentes</p>
-      <ul class="osint-history-list">
-        <li v-for="item in history.slice(1)" :key="item.id" class="osint-history-item">
-          <span class="osint-history-query">{{ item.query }}</span>
-          <span :class="['osint-status', 'osint-status-sm', 'status-' + item.status]">{{ statusLabels[item.status] }}</span>
+      <ul class="history-list">
+        <li v-for="item in history.slice(1)" :key="item.id">
+          <button type="button" class="history-item" @click="search = item">
+            <span class="history-query">{{ item.query }}</span>
+            <span class="history-date">{{ formatDate(item.created_at) }}</span>
+          </button>
         </li>
       </ul>
     </div>
@@ -191,7 +281,7 @@ const resultCount = computed(() => (search.value?.results || []).length)
 
 <style scoped>
 .osint {
-  max-width: 900px;
+  max-width: 1040px;
   margin: 0 auto;
 }
 
@@ -209,9 +299,16 @@ const resultCount = computed(() => (search.value?.results || []).length)
 }
 
 .osint-subtitle {
-  margin: 0;
+  margin: 0 auto;
+  max-width: 580px;
   font-size: 0.88rem;
+  line-height: 1.6;
   color: var(--text-muted);
+}
+
+.osint-subtitle strong {
+  color: var(--accent);
+  font-weight: 500;
 }
 
 /* ---------- formulaire ---------- */
@@ -243,7 +340,8 @@ const resultCount = computed(() => (search.value?.results || []).length)
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: 0.9rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.88rem;
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
@@ -261,7 +359,10 @@ const resultCount = computed(() => (search.value?.results || []).length)
 }
 
 .osint-submit {
-  padding: 11px 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
   background: linear-gradient(135deg, var(--accent), #6355d6);
   color: #fff;
   border: 1px solid var(--accent-line);
@@ -288,81 +389,9 @@ const resultCount = computed(() => (search.value?.results || []).length)
   cursor: not-allowed;
 }
 
-.osint-error {
-  text-align: center;
-  color: var(--danger);
-  font-size: 0.86rem;
-  margin-bottom: 18px;
-}
-
-/* ---------- résultat ---------- */
-.osint-result {
-  background: var(--glass-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 22px;
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  box-shadow: var(--shadow-2);
-}
-
-.osint-result-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-bottom: 13px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.osint-result-query {
-  font-family: 'IBM Plex Mono', monospace;
-  font-weight: 500;
-  font-size: 0.95rem;
-  color: var(--text);
-  word-break: break-all;
-}
-
-.osint-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  flex-shrink: 0;
-  white-space: nowrap;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.66rem;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 4px 11px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-}
-
-.status-pending,
-.status-running {
-  background: var(--warning-soft);
-  border-color: rgba(245, 194, 107, 0.3);
-  color: var(--warning);
-}
-
-.status-finished {
-  background: var(--success-soft);
-  border-color: rgba(61, 220, 151, 0.3);
-  color: var(--success);
-}
-
-.status-failed {
-  background: var(--danger-soft);
-  border-color: rgba(245, 118, 107, 0.3);
-  color: var(--danger);
-}
-
-.status-spinner {
-  width: 9px;
-  height: 9px;
+.spinner {
+  width: 11px;
+  height: 11px;
   border: 1.5px solid currentColor;
   border-top-color: transparent;
   border-radius: 50%;
@@ -373,96 +402,312 @@ const resultCount = computed(() => (search.value?.results || []).length)
   to { transform: rotate(360deg); }
 }
 
+.osint-error {
+  text-align: center;
+  color: var(--danger);
+  font-size: 0.86rem;
+  margin-bottom: 18px;
+}
+
+.osint-warning {
+  color: var(--warning);
+  font-size: 0.84rem;
+  margin: 0 0 16px;
+}
+
 .empty-hint {
   color: var(--text-muted);
-  font-size: 0.87rem;
-  margin: 0;
+  font-size: 0.88rem;
+  margin: 0 0 16px;
 }
 
-.osint-error-inline {
-  color: var(--danger);
-}
-
-.osint-pages {
+/* ---------- entete du resultat ---------- */
+.result-head {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
 }
 
-.osint-page {
-  padding: 13px 15px;
-  background: var(--glass-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-
-.osint-page-url {
-  margin: 0 0 10px;
+.result-query {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.78rem;
-  color: var(--accent-2);
+  font-size: 1.05rem;
+  color: var(--text);
   word-break: break-all;
 }
 
-.osint-page-row {
+.result-date {
+  flex-shrink: 0;
+  font-size: 0.76rem;
+  color: var(--text-faint);
+}
+
+/* ---------- panneaux ---------- */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 17px 19px;
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow: var(--shadow-2);
+}
+
+.panel-wide {
+  grid-column: 1 / -1;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 3px;
+}
+
+.panel-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.panel-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  padding: 1px 9px;
+}
+
+.panel-note {
+  margin: 0 0 14px;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+/* ---------- sous-domaines ---------- */
+/* Tout contenu de panneau defile dans son cadre plutot que d'etirer la page :
+   un domaine peut avoir 100 sous-domaines, des centaines de prefixes ou une
+   douzaine d'enregistrements TXT. La page garde ainsi une hauteur stable. */
+.panel-scroll {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.panel-scroll-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 5px;
+}
+
+.chip,
+.prefix-chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  padding: 2px 9px;
+  background: var(--glass-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  word-break: break-all;
+  height: fit-content;
+}
+
+/* ---------- enregistrements DNS / WHOIS ---------- */
+.record {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin-top: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
 }
 
-.osint-tag-label {
+.record:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.record-type {
   flex-shrink: 0;
-  width: 52px;
+  width: 48px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.64rem;
+  font-size: 0.7rem;
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-2);
+  padding-top: 2px;
+}
+
+.record-type-wide {
+  width: 120px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--text-faint);
-  padding-top: 4px;
 }
 
-.osint-tags {
+.record-values {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
-.osint-tag {
+.record-value {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.74rem;
-  padding: 3px 10px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.whois-value {
+  font-size: 0.82rem;
+  color: var(--text);
+  word-break: break-word;
+}
+
+/* ---------- plages d'adresses ---------- */
+.range {
+  padding: 11px 0;
+  border-top: 1px solid var(--border);
+}
+
+.range:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.range-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.range-prefix {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.86rem;
+  color: var(--text);
+}
+
+.range-asn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--accent-2);
+  background: var(--info-soft);
+  border: 1px solid rgba(106, 184, 245, 0.25);
   border-radius: 999px;
-  border: 1px solid transparent;
+  padding: 1px 8px;
+}
+
+.range-country {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.range-org {
+  margin: 0 0 4px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.range-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+/* ---------- espace d'adressage annonce ---------- */
+.as-block {
+  padding-top: 11px;
+  margin-top: 11px;
+  border-top: 1px solid var(--border);
+}
+
+.as-block:first-of-type {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: none;
+}
+
+.as-block-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+}
+
+.as-block-count {
+  font-size: 0.74rem;
+  color: var(--text-faint);
+}
+
+/* ---------- historique des URLs ---------- */
+.url-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.url-item {
+  padding: 7px 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
   text-decoration: none;
   word-break: break-all;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.14s ease, color 0.14s ease;
 }
 
-.osint-tag-email {
-  background: var(--info-soft);
-  border-color: rgba(106, 184, 245, 0.25);
-  color: var(--info);
+.url-item:last-child {
+  border-bottom: none;
 }
 
-.osint-tag-social {
+.url-item:hover {
   background: var(--accent-soft);
-  border-color: var(--accent-line);
-  color: #a396ff;
+  color: var(--text);
 }
 
-.osint-tag-social:hover {
-  border-color: var(--accent);
-  box-shadow: 0 0 16px rgba(124, 108, 245, 0.3);
-}
-
-/* ---------- historique ---------- */
+/* ---------- historique des recherches ---------- */
 .osint-history {
-  margin-top: 22px;
+  margin-top: 26px;
 }
 
-.osint-history-list {
+.history-list {
   list-style: none;
   margin: 10px 0 0;
   padding: 0;
@@ -471,33 +716,36 @@ const resultCount = computed(() => (search.value?.results || []).length)
   gap: 5px;
 }
 
-.osint-history-item {
+.history-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
   padding: 9px 14px;
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 0.84rem;
-  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.osint-history-item:hover {
+.history-item:hover {
   background: var(--glass-2);
-  border-color: var(--border-strong);
+  border-color: var(--accent-line);
 }
 
-.osint-history-query {
+.history-query {
   font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.83rem;
   color: var(--text);
   word-break: break-all;
 }
 
-.osint-status-sm {
-  font-size: 0.6rem;
-  padding: 2px 9px;
+.history-date {
+  flex-shrink: 0;
+  font-size: 0.74rem;
+  color: var(--text-faint);
 }
 </style>

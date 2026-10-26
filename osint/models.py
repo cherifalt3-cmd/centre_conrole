@@ -7,17 +7,14 @@ class Search(models.Model):
     ]
 
     STATUS_CHOICES = [
-        ('pending', 'En attente'),
-        ('running', 'En cours'),
         ('finished', 'Terminé'),
         ('failed', 'Échec'),
     ]
 
     query = models.CharField(max_length=255)
     query_type = models.CharField(max_length=20, choices=QUERY_TYPE_CHOICES, default='domain')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    job_key = models.CharField(max_length=50, blank=True)
-    results = models.JSONField(default=list, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='finished')
+    findings = models.JSONField(default=dict, blank=True, help_text="Resultats par source")
     error_message = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
