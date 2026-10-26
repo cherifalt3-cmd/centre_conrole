@@ -258,7 +258,7 @@ async function handleLogin() {
   left: 50%;
   width: 46px;
   height: 46px;
-  margin: -23px 0 0 -23px;
+  margin: -24px 0 0 -24px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, #fff3b0, #ffb43d 45%, #ff7a1a 80%);
   box-shadow: 0 0 30px 10px rgba(255, 160, 40, 0.55), 0 0 70px 30px rgba(255, 120, 20, 0.25);
@@ -326,7 +326,7 @@ async function handleLogin() {
   left: 50%;
   width: 30px;
   height: 10px;
-  margin: -5px 0 0 -15px;
+  margin: -6px 0 0 -16px;
   border: 1px solid rgba(255, 230, 176, 0.6);
   border-radius: 50%;
   transform: rotate(-20deg);
@@ -350,7 +350,7 @@ async function handleLogin() {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-3), 0 0 80px rgba(124, 108, 245, 0.14);
-  padding: 38px 34px;
+  padding: 40px 32px;
   width: 100%;
   max-width: 376px;
 }
@@ -371,61 +371,59 @@ async function handleLogin() {
 
 .eyebrow {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.66rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-text);
   margin: 0 0 8px;
 }
 
 h1 {
-  font-size: 1.62rem;
+  font-size: var(--fs-2xl);
   font-weight: 600;
   letter-spacing: -0.02em;
-  margin: 0 0 30px;
+  margin: 0 0 32px;
   color: #fff;
 }
 
 .field {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 label {
   display: block;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text-muted);
-  margin-bottom: 7px;
+  margin-bottom: 8px;
 }
 
 input {
   width: 100%;
-  padding: 11px 13px;
+  padding: 12px 12px;
   background: var(--glass-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 0.93rem;
+  font-size: var(--fs-base);
   color: var(--text);
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
 input:focus {
-  outline: none;
   background: var(--glass-3);
   border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .btn {
   width: 100%;
   padding: 12px;
   margin-top: 10px;
-  background: linear-gradient(135deg, var(--accent), #6355d6);
+  background: linear-gradient(135deg, var(--accent-strong), #6355d6);
   color: #fff;
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-sm);
-  font-size: 0.92rem;
+  font-size: var(--fs-base);
   font-weight: 500;
   cursor: pointer;
   box-shadow: 0 6px 24px rgba(124, 108, 245, 0.3);
@@ -439,9 +437,9 @@ input:focus {
 }
 
 .error {
-  margin-top: 14px;
+  margin-top: 16px;
   margin-bottom: 0;
   color: var(--danger);
-  font-size: 0.86rem;
+  font-size: var(--fs-base);
 }
 </style>

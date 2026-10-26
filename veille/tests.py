@@ -1,11 +1,68 @@
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIClient
 
 from .models import Article, Source
-from .views import detect_severity, extract_page_text
+from .views import RefreshFeedsView, detect_severity, extract_page_text
+
+
+def fake_feed_response(body, content_type='application/rss+xml'):
+    response = MagicMock()
+    response.content = body
+    response.headers = {'Content-Type': content_type}
+    response.raise_for_status.return_value = None
+    return response
+
+
+class FeedImportTests(TestCase):
+    def setUp(self):
+        self.source = Source.objects.create(
+            name='Flux', url='https://flux.test/rss', category='cybersecurity'
+        )
+
+    def test_encodage_declare_seulement_dans_l_en_tete_http(self):
+        # Aucun encodage dans le prologue XML : seul Content-Type permet de decoder
+        body = (
+            '<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>'
+            '<item><title>Привет мир</title><link>https://flux.test/1</link></item>'
+            '</channel></rss>'
+        ).encode('windows-1251')
+
+        with patch('veille.views.requests.get', return_value=fake_feed_response(
+            body, 'application/rss+xml; charset=windows-1251'
+        )):
+            RefreshFeedsView()._import_source(self.source)
+
+        self.assertEqual(Article.objects.get().title, 'Привет мир')
+
+    def test_un_import_interrompu_n_enregistre_rien(self):
+        # Le second article a une date mal formee : l'import doit etre annule en
+        # entier plutot que d'enregistrer le premier en silence
+        body = (
+            b'<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel>'
+            b'<item><title>A</title><link>https://flux.test/a</link></item>'
+            b'<item><title>B</title><link>https://flux.test/b</link></item>'
+            b'</channel></rss>'
+        )
+        real_get_or_create = Article.objects.get_or_create
+        calls = {'count': 0}
+
+        def fail_on_second(*args, **kwargs):
+            calls['count'] += 1
+            if calls['count'] == 2:
+                raise RuntimeError('panne au milieu de l import')
+            return real_get_or_create(*args, **kwargs)
+
+        with patch('veille.views.requests.get', return_value=fake_feed_response(body)), \
+             patch.object(Article.objects, 'get_or_create', side_effect=fail_on_second):
+            response = RefreshFeedsView().post(request=None)
+
+        self.assertEqual(response.data['failed_sources'], ['Flux'])
+        self.assertEqual(response.data['created'], 0)
+        self.assertEqual(Article.objects.count(), 0)
 
 
 class DetectSeverityTests(SimpleTestCase):
@@ -100,3 +157,24 @@ class ArticleApiTests(TestCase):
     def test_authentification_requise(self):
         anonymous = APIClient()
         self.assertEqual(anonymous.get('/api/veille/articles/').status_code, 401)
+
+    def test_pages_stables_quand_les_articles_sont_ex_aequo(self):
+        # Des articles sans date sont tous ex aequo sur le tri principal : sans cle
+        # de departage, une page pourrait repeter des articles et en sauter d'autres
+        source = Source.objects.first()
+        Article.objects.bulk_create([
+            Article(source=source, title=f'Sans date {i}', link=f'https://a.test/nd{i}')
+            for i in range(40)
+        ])
+
+        seen = []
+        page = 1
+        while True:
+            response = self.client.get(f'/api/veille/articles/?page={page}')
+            seen += [article['id'] for article in response.data['results']]
+            if not response.data['next']:
+                break
+            page += 1
+
+        self.assertEqual(len(seen), len(set(seen)), 'un article apparait sur deux pages')
+        self.assertEqual(len(seen), Article.objects.count())

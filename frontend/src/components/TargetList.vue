@@ -65,8 +65,13 @@ async function copyAddress(target) {
 }
 
 async function fetchTargets() {
-  const response = await apiFetch('/api/recon/targets/')
-  targets.value = await response.json()
+  try {
+    const response = await apiFetch('/api/recon/targets/')
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    targets.value = await response.json()
+  } catch {
+    error.value = 'Impossible de charger le carnet.'
+  }
 }
 
 async function addTarget() {
@@ -92,8 +97,24 @@ async function addTarget() {
   await fetchTargets()
 }
 
-async function deleteTarget(id) {
-  await apiFetch(`/api/recon/targets/${id}/`, { method: 'DELETE' })
+// Suppression en deux temps, comme dans le Kanban : le premier clic transforme
+// le bouton en « Confirmer ? » pendant quelques secondes.
+const pendingDeleteId = ref(null)
+let pendingDeleteTimer = null
+
+async function requestDelete(target) {
+  if (pendingDeleteId.value !== target.id) {
+    clearTimeout(pendingDeleteTimer)
+    pendingDeleteId.value = target.id
+    pendingDeleteTimer = setTimeout(() => (pendingDeleteId.value = null), 4000)
+    return
+  }
+
+  clearTimeout(pendingDeleteTimer)
+  pendingDeleteId.value = null
+  error.value = ''
+  const response = await apiFetch(`/api/recon/targets/${target.id}/`, { method: 'DELETE' })
+  if (!response.ok) error.value = "La cible n'a pas pu être supprimée."
   await fetchTargets()
 }
 
@@ -109,24 +130,42 @@ onMounted(fetchTargets)
 
     <form class="add-form card" @submit.prevent="addTarget">
       <div class="form-row">
-        <input v-model="newName" type="text" placeholder="Nom (facultatif)" />
-        <input v-model="newAddress" type="text" placeholder="Adresse (IP ou domaine)" required />
+        <label class="field">
+          <span class="field-label">Nom <span class="field-optional">facultatif</span></span>
+          <input v-model="newName" type="text" placeholder="Ex : Serveur de recette" />
+        </label>
+        <label class="field">
+          <span class="field-label">Adresse</span>
+          <input v-model="newAddress" type="text" placeholder="IP, domaine ou URL" required />
+        </label>
       </div>
-      <textarea v-model="newNotes" placeholder="Notes (facultatif)" rows="3" class="notes-input"></textarea>
+      <label class="field">
+        <span class="field-label">Notes <span class="field-optional">facultatif</span></span>
+        <textarea v-model="newNotes" rows="3" class="notes-input"></textarea>
+      </label>
       <button type="submit">Ajouter</button>
     </form>
 
-    <p v-if="error" class="error">{{ error }}</p>
+    <p v-if="error" class="error" role="alert">{{ error }}</p>
 
     <ul class="target-list">
       <li v-for="target in targets" :key="target.id">
         <template v-if="editingId === target.id">
           <div class="edit-form">
             <div class="form-row">
-              <input v-model="editName" type="text" placeholder="Nom (facultatif)" />
-              <input v-model="editAddress" type="text" placeholder="Adresse (IP ou domaine)" required />
+              <label class="field">
+                <span class="field-label">Nom <span class="field-optional">facultatif</span></span>
+                <input v-model="editName" type="text" />
+              </label>
+              <label class="field">
+                <span class="field-label">Adresse</span>
+                <input v-model="editAddress" type="text" required />
+              </label>
             </div>
-            <textarea v-model="editNotes" placeholder="Notes (facultatif)" rows="3" class="notes-input"></textarea>
+            <label class="field">
+              <span class="field-label">Notes <span class="field-optional">facultatif</span></span>
+              <textarea v-model="editNotes" rows="3" class="notes-input"></textarea>
+            </label>
             <div class="edit-actions">
               <button type="button" class="save-btn" @click="saveEdit(target)">Enregistrer</button>
               <button type="button" class="cancel-btn" @click="cancelEdit">Annuler</button>
@@ -137,22 +176,33 @@ onMounted(fetchTargets)
         <template v-else>
           <div class="target-info">
             <strong>{{ target.name || target.address }}</strong>
-            <span v-if="target.name" class="address-inline">
-              <span class="address-text">— {{ target.address }}</span>
-              <button type="button" class="copy-address-btn" @click="copyAddress(target)">
-                {{ copiedId === target.id ? 'Copié !' : 'Copier' }}
-              </button>
-            </span>
-            <span v-else class="address-inline">
-              <button type="button" class="copy-address-btn" @click="copyAddress(target)">
+            <span class="address-inline">
+              <span v-if="target.name" class="address-text">— {{ target.address }}</span>
+              <button
+                type="button"
+                class="copy-address-btn"
+                :aria-label="`Copier l'adresse ${target.address}`"
+                @click="copyAddress(target)"
+              >
                 {{ copiedId === target.id ? 'Copié !' : 'Copier' }}
               </button>
             </span>
             <p v-if="target.notes" class="notes">{{ target.notes }}</p>
           </div>
           <div class="item-actions">
-            <button class="edit-btn" @click="startEdit(target)">Modifier</button>
-            <button class="delete-btn" @click="deleteTarget(target.id)">Supprimer</button>
+            <button type="button" class="edit-btn" @click="startEdit(target)">Modifier</button>
+            <button
+              type="button"
+              :class="['delete-btn', { armed: pendingDeleteId === target.id }]"
+              :aria-label="
+                pendingDeleteId === target.id
+                  ? `Confirmer la suppression de ${target.name || target.address}`
+                  : `Supprimer ${target.name || target.address}`
+              "
+              @click="requestDelete(target)"
+            >
+              {{ pendingDeleteId === target.id ? 'Confirmer ?' : 'Supprimer' }}
+            </button>
           </div>
         </template>
       </li>
@@ -168,13 +218,13 @@ onMounted(fetchTargets)
 
 .targets-head {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 h2 {
   margin: 6px 0 0;
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 2.05rem;
+  font-size: var(--fs-3xl);
   font-weight: 700;
   color: var(--text);
   text-shadow: 0 2px 30px rgba(124, 108, 245, 0.2);
@@ -193,8 +243,8 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 18px;
-  margin-bottom: 26px;
+  padding: 20px;
+  margin-bottom: 24px;
 }
 
 .form-row {
@@ -211,13 +261,38 @@ h2 {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
-.add-form input {
+/* Chaque champ est enveloppe dans son libelle : c'est le libelle qui occupe la
+   place dans la ligne, et le champ prend toute sa largeur */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   flex: 1;
   min-width: 140px;
+}
+
+.field-label {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.field-optional {
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.field-optional::before {
+  content: '· ';
+}
+
+.add-form input,
+.edit-form input {
+  width: 100%;
 }
 
 .notes-input {
@@ -235,20 +310,18 @@ h2 {
 .add-form input:focus,
 .notes-input:focus,
 .edit-form input:focus {
-  outline: none;
   background: var(--glass-2);
   border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .add-form button {
   align-self: flex-start;
   padding: 10px 20px;
-  background: linear-gradient(135deg, var(--accent), #6355d6);
+  background: linear-gradient(135deg, var(--accent-strong), #6355d6);
   color: #fff;
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-sm);
-  font-size: 0.87rem;
+  font-size: var(--fs-base);
   font-weight: 500;
   cursor: pointer;
   box-shadow: 0 6px 22px rgba(124, 108, 245, 0.28);
@@ -263,8 +336,8 @@ h2 {
 
 .error {
   color: var(--danger);
-  font-size: 0.87rem;
-  margin-bottom: 14px;
+  font-size: var(--fs-base);
+  margin-bottom: 16px;
 }
 
 .target-list {
@@ -280,7 +353,7 @@ h2 {
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 15px 17px;
+  padding: 16px 16px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -306,13 +379,13 @@ h2 {
 .target-info strong {
   color: var(--text);
   font-weight: 600;
-  font-size: 0.94rem;
+  font-size: var(--fs-md);
   overflow-wrap: break-word;
 }
 
 .notes {
   color: var(--text-muted);
-  font-size: 0.83rem;
+  font-size: var(--fs-sm);
   margin: 6px 0 0;
   overflow-wrap: break-word;
 }
@@ -330,19 +403,23 @@ h2 {
 .address-text {
   min-width: 0;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   overflow-wrap: break-word;
 }
 
+/* min-height 28px : il ne faisait que 18px, sous le minimum WCAG 2.5.8 (24px) */
 .copy-address-btn {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
   background: var(--glass-2);
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 6px;
-  padding: 2px 9px;
-  font-size: 0.71rem;
+  padding: 2px 10px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
@@ -350,7 +427,7 @@ h2 {
 .copy-address-btn:hover {
   background: var(--accent-soft);
   border-color: var(--accent-line);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .item-actions {
@@ -369,7 +446,7 @@ h2 {
   color: var(--text-muted);
   border-radius: 7px;
   padding: 6px 12px;
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -379,10 +456,11 @@ h2 {
 .cancel-btn:hover {
   background: var(--accent-soft);
   border-color: var(--accent-line);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
-.delete-btn:hover {
+.delete-btn:hover,
+.delete-btn.armed {
   background: var(--danger-soft);
   border-color: var(--danger);
   color: var(--danger);
@@ -402,10 +480,8 @@ h2 {
 }
 
 .edit-form input {
-  flex: 1;
-  min-width: 120px;
-  padding: 8px 11px;
-  font-size: 0.84rem;
+  padding: 8px 12px;
+  font-size: var(--fs-sm);
 }
 
 .edit-actions {
@@ -415,12 +491,12 @@ h2 {
 }
 
 .save-btn {
-  background: linear-gradient(135deg, var(--accent), #6355d6);
+  background: linear-gradient(135deg, var(--accent-strong), #6355d6);
   color: #fff;
   border: 1px solid var(--accent-line);
   border-radius: 7px;
-  padding: 7px 14px;
-  font-size: 0.8rem;
+  padding: 8px 16px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(124, 108, 245, 0.26);

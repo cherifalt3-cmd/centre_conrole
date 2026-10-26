@@ -8,6 +8,7 @@ const page = ref(1)
 const hasMore = ref(false)
 const loading = ref(false)
 const loadingMore = ref(false)
+const listError = ref('')
 const refreshing = ref(false)
 const activeCategory = ref(null)
 const activeSeverity = ref(null)
@@ -29,37 +30,54 @@ function articlesPath(pageNumber) {
   return `/api/veille/articles/?${params}`
 }
 
-// Deux clics rapides sur les filtres lancent deux requetes : la plus lente peut
-// arriver en dernier et afficher les resultats du mauvais filtre. Seule la
-// reponse a la requete la plus recente est conservee.
-let latestRequest = 0
+// Chaque rechargement de la liste (filtre, actualisation) ouvre une nouvelle
+// generation. Toute reponse d'une generation perimee est ignoree : deux clics
+// rapides sur les filtres, ou un « Charger plus » lance pendant un rechargement,
+// ne peuvent plus melanger les pages de deux filtres differents.
+let generation = 0
+
+async function readPage(pageNumber) {
+  const response = await apiFetch(articlesPath(pageNumber))
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response.json()
+}
 
 async function fetchArticles() {
-  const request = ++latestRequest
+  const current = ++generation
   loading.value = true
+  listError.value = ''
   try {
-    const response = await apiFetch(articlesPath(1))
-    const data = await response.json()
-    if (request !== latestRequest) return
+    const data = await readPage(1)
+    if (current !== generation) return
     articles.value = data.results
     totalCount.value = data.count
     hasMore.value = Boolean(data.next)
     page.value = 1
+  } catch {
+    if (current === generation) listError.value = 'Impossible de charger les articles.'
   } finally {
-    if (request === latestRequest) loading.value = false
+    if (current === generation) loading.value = false
   }
 }
 
 async function loadMore() {
-  const request = latestRequest
+  if (loading.value || loadingMore.value) return
+
+  const current = generation
+  // Page memorisee au depart : on enregistre celle-la, pas « page + 1 » calcule
+  // apres coup, au cas ou la liste aurait change entre-temps.
+  const requested = page.value + 1
   loadingMore.value = true
+  listError.value = ''
   try {
-    const response = await apiFetch(articlesPath(page.value + 1))
-    const data = await response.json()
-    if (request !== latestRequest) return
-    articles.value.push(...data.results)
+    const data = await readPage(requested)
+    if (current !== generation) return
+    const known = new Set(articles.value.map((article) => article.id))
+    articles.value.push(...data.results.filter((article) => !known.has(article.id)))
     hasMore.value = Boolean(data.next)
-    page.value += 1
+    page.value = requested
+  } catch {
+    if (current === generation) listError.value = 'Impossible de charger la suite.'
   } finally {
     loadingMore.value = false
   }
@@ -137,7 +155,7 @@ function formatDate(iso) {
       <div class="veille-actions">
         <span v-if="lastRefreshInfo" class="refresh-info">{{ lastRefreshInfo }}</span>
         <button type="button" class="refresh-btn" :disabled="refreshing" @click="refresh">
-          <svg v-if="!refreshing" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg aria-hidden="true" focusable="false" v-if="!refreshing" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20 12a8 8 0 1 1-2.3-5.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             <path d="M20 4v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
@@ -151,6 +169,7 @@ function formatDate(iso) {
         <button
           type="button"
           :class="['filter-btn', { active: activeCategory === null }]"
+          :aria-pressed="Boolean(activeCategory === null)"
           @click="activeCategory = null"
         >
           Tous
@@ -158,6 +177,7 @@ function formatDate(iso) {
         <button
           type="button"
           :class="['filter-btn', { active: activeCategory === 'cybersecurity' }]"
+          :aria-pressed="Boolean(activeCategory === 'cybersecurity')"
           @click="activeCategory = 'cybersecurity'"
         >
           Cybersécurité
@@ -165,6 +185,7 @@ function formatDate(iso) {
         <button
           type="button"
           :class="['filter-btn', { active: activeCategory === 'ai' }]"
+          :aria-pressed="Boolean(activeCategory === 'ai')"
           @click="activeCategory = 'ai'"
         >
           IA
@@ -175,6 +196,7 @@ function formatDate(iso) {
         <button
           type="button"
           :class="['filter-btn', 'filter-btn-sub', { active: activeSeverity === null }]"
+          :aria-pressed="Boolean(activeSeverity === null)"
           @click="activeSeverity = null"
         >
           Toutes gravités
@@ -184,6 +206,7 @@ function formatDate(iso) {
           :key="key"
           type="button"
           :class="['filter-btn', 'filter-btn-sub', 'filter-btn-' + key, { active: activeSeverity === key }]"
+          :aria-pressed="Boolean(activeSeverity === key)"
           @click="activeSeverity = key"
         >
           {{ label }}
@@ -191,7 +214,12 @@ function formatDate(iso) {
       </div>
     </div>
 
+    <p v-if="listError" class="summarize-error" role="alert">{{ listError }}</p>
+
     <p v-if="loading" class="empty-hint">Chargement...</p>
+    <p v-else-if="listError && articles.length === 0" class="empty-hint">
+      Réessaie avec le bouton « Actualiser » ou recharge la page.
+    </p>
     <p v-else-if="articles.length === 0" class="empty-hint">
       <template v-if="activeCategory || activeSeverity">Aucun article pour ces filtres.</template>
       <template v-else>
@@ -242,7 +270,7 @@ function formatDate(iso) {
     </div>
 
     <div v-if="hasMore" class="load-more">
-      <button type="button" class="load-more-btn" :disabled="loadingMore" @click="loadMore">
+      <button type="button" class="load-more-btn" :disabled="loading || loadingMore" @click="loadMore">
         {{ loadingMore ? 'Chargement...' : 'Charger plus' }}
       </button>
     </div>
@@ -258,7 +286,7 @@ function formatDate(iso) {
 /* ---------- masthead ---------- */
 .masthead {
   text-align: center;
-  padding: 18px 0 20px;
+  padding: 20px 0 20px;
   margin-bottom: 24px;
   border-top: 1px solid var(--border-strong);
   border-bottom: 1px solid var(--border);
@@ -278,17 +306,17 @@ function formatDate(iso) {
 .masthead-kicker {
   margin: 0 0 8px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.66rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .masthead-title {
-  margin: 0 0 9px;
+  margin: 0 0 10px;
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 2.05rem;
+  font-size: var(--fs-3xl);
   font-weight: 700;
   line-height: 1.2;
   color: var(--text);
@@ -297,7 +325,7 @@ function formatDate(iso) {
 
 .masthead-meta {
   margin: 0;
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   font-style: italic;
   letter-spacing: 0.04em;
   color: var(--text-faint);
@@ -320,7 +348,7 @@ function formatDate(iso) {
 }
 
 .refresh-info {
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -330,11 +358,11 @@ function formatDate(iso) {
   gap: 8px;
   padding: 8px 16px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-sm);
   font-weight: 500;
-  font-size: 0.85rem;
+  font-size: var(--fs-base);
   cursor: pointer;
   transition: background 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
 }
@@ -357,7 +385,7 @@ function formatDate(iso) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 14px 16px;
+  padding: 16px 16px;
   margin-bottom: 20px;
   background: var(--glass-1);
   border: 1px solid var(--border);
@@ -373,13 +401,13 @@ function formatDate(iso) {
 }
 
 .filter-btn {
-  padding: 5px 14px;
+  padding: 6px 16px;
   border: 1px solid var(--border);
   background: var(--glass-1);
   color: var(--text-muted);
   border-radius: 999px;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -396,8 +424,8 @@ function formatDate(iso) {
 }
 
 .filter-btn-sub {
-  padding: 3px 11px;
-  font-size: 0.75rem;
+  padding: 4px 12px;
+  font-size: var(--fs-xs);
 }
 
 .filter-btn-critical.active {
@@ -430,14 +458,14 @@ function formatDate(iso) {
 
 .empty-hint {
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
 }
 
 /* ---------- articles ---------- */
 .article-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
-  gap: 13px;
+  gap: 12px;
 }
 
 .article-card {
@@ -447,7 +475,7 @@ function formatDate(iso) {
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 15px 17px;
+  padding: 16px 16px;
   text-decoration: none;
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
@@ -482,8 +510,8 @@ function formatDate(iso) {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px 9px;
-  margin-bottom: 9px;
+  gap: 6px 10px;
+  margin-bottom: 10px;
 }
 
 .source-badge,
@@ -491,11 +519,11 @@ function formatDate(iso) {
   flex-shrink: 0;
   white-space: nowrap;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.63rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 2px 9px;
+  padding: 2px 10px;
   border-radius: 999px;
   border: 1px solid transparent;
 }
@@ -545,15 +573,15 @@ function formatDate(iso) {
   margin-left: auto;
   white-space: nowrap;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
 }
 
 .article-title {
   display: block;
-  margin: 0 0 7px;
+  margin: 0 0 8px;
   font-weight: 600;
-  font-size: 0.93rem;
+  font-size: var(--fs-base);
   line-height: 1.45;
   color: var(--text);
   text-decoration: none;
@@ -566,7 +594,7 @@ function formatDate(iso) {
 
 .article-summary {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   line-height: 1.55;
   color: var(--text-muted);
   display: -webkit-box;
@@ -586,19 +614,19 @@ function formatDate(iso) {
 .article-actions {
   display: flex;
   align-items: center;
-  margin-top: 11px;
+  margin-top: 12px;
 }
 
 .summarize-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   padding: 4px 12px;
   background: var(--glass-2);
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
@@ -606,7 +634,7 @@ function formatDate(iso) {
 .summarize-btn:hover:not(:disabled) {
   background: var(--accent-soft);
   border-color: var(--accent-line);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .summarize-btn:disabled {
@@ -629,42 +657,42 @@ function formatDate(iso) {
 
 .ai-badge {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.62rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-soft);
   border: 1px solid var(--accent-line);
   border-radius: 999px;
-  padding: 2px 9px;
+  padding: 2px 10px;
 }
 
 .summarize-error {
   color: var(--danger);
-  font-size: 0.85rem;
-  margin-bottom: 14px;
+  font-size: var(--fs-base);
+  margin-bottom: 16px;
 }
 
 .result-count {
   margin: 0 0 12px;
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
 }
 
 .load-more {
   display: flex;
   justify-content: center;
-  margin-top: 22px;
+  margin-top: 24px;
 }
 
 .load-more-btn {
-  padding: 9px 22px;
+  padding: 10px 24px;
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text-muted);
-  font-size: 0.84rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);

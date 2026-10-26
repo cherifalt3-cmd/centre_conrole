@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from .models import (
     Target, Tool, ToolOption, ToolOptionChoice, Catalog, CatalogEntry, CommandPreset,
+    normalize_address,
 )
+
+DUPLICATE_TARGET_MESSAGE = 'Cette cible est déjà dans le carnet.'
 
 
 class TargetSerializer(serializers.ModelSerializer):
@@ -14,15 +17,14 @@ class TargetSerializer(serializers.ModelSerializer):
         extra_kwargs = {'address': {'validators': []}}
 
     def validate_address(self, value):
-        # Espaces et casse seulement : les domaines ne sont pas sensibles a la
-        # casse. On ne retire ni schema ni chemin, une URL precise peut etre voulue.
-        normalized = value.strip().lower()
+        # Meme normalisation que le modele : hote en minuscules, chemin intact.
+        normalized = normalize_address(value)
 
         duplicates = Target.objects.filter(address=normalized)
         if self.instance is not None:
             duplicates = duplicates.exclude(pk=self.instance.pk)
         if duplicates.exists():
-            raise serializers.ValidationError('Cette cible est déjà dans le carnet.')
+            raise serializers.ValidationError(DUPLICATE_TARGET_MESSAGE)
 
         return normalized
 

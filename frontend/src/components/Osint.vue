@@ -62,10 +62,15 @@ async function launchSearch() {
 }
 
 async function fetchHistory() {
-  const response = await apiFetch('/api/osint/searches/')
-  const data = await response.json()
-  history.value = data
-  if (data.length) search.value = data[0]
+  try {
+    const response = await apiFetch('/api/osint/searches/')
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+    history.value = data
+    if (data.length) search.value = data[0]
+  } catch {
+    errorMessage.value = "Impossible de charger l'historique des recherches."
+  }
 }
 
 onMounted(fetchHistory)
@@ -76,7 +81,17 @@ const dns = computed(() => findings.value.dns || {})
 const ipRanges = computed(() => findings.value.ip_ranges || [])
 const asPrefixes = computed(() => findings.value.as_prefixes || [])
 const whois = computed(() => findings.value.whois || null)
-const wayback = computed(() => findings.value.wayback || [])
+// Chaque lien pointe vers la copie archivee, jamais vers l'URL d'origine : un clic
+// sur le site reel contacterait la cible depuis ton IP et romprait le mode
+// passif. Les recherches anterieures ne stockaient que l'URL : on les envoie vers
+// le calendrier des captures d'Archive.org, qui reste une page de l'archive.
+const wayback = computed(() =>
+  (findings.value.wayback || []).map((entry) =>
+    typeof entry === 'string'
+      ? { url: entry, snapshot: `https://web.archive.org/web/*/${entry}` }
+      : entry,
+  ),
+)
 
 const hasAnything = computed(
   () =>
@@ -109,7 +124,7 @@ function whoisValue(value) {
     <div class="osint-header">
       <p class="eyebrow">Reconnaissance passive</p>
       <h2 class="osint-title">OSINT automatique</h2>
-      <p class="osint-subtitle">
+      <p id="osint-subtitle" class="osint-subtitle">
         Donne un domaine. L'app interroge des sources tierces qui détiennent déjà
         l'information publique — <strong>la cible n'est jamais contactée</strong> et rien
         n'apparaît dans ses journaux.
@@ -118,11 +133,20 @@ function whoisValue(value) {
 
     <form class="osint-form" @submit.prevent="launchSearch">
       <span class="osint-input-wrap">
-        <svg class="osint-input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg aria-hidden="true" focusable="false" class="osint-input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
           <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
-        <input v-model="query" type="text" class="osint-input" placeholder="exemple.com" :disabled="submitting" />
+        <label for="osint-query" class="visually-hidden">Domaine à analyser</label>
+        <input
+          id="osint-query"
+          v-model="query"
+          type="text"
+          class="osint-input"
+          placeholder="exemple.com"
+          aria-describedby="osint-subtitle"
+          :disabled="submitting"
+        />
       </span>
       <button type="submit" class="osint-submit" :disabled="submitting || !query.trim()">
         <span v-if="submitting" class="spinner"></span>
@@ -242,18 +266,20 @@ function whoisValue(value) {
             <span class="panel-count tabular">{{ wayback.length }}</span>
           </div>
           <p class="panel-note">
-            URLs archivées par Archive.org — révèle d'anciens endpoints et fichiers exposés
+            Anciens endpoints et fichiers exposés. Chaque lien ouvre la copie archivée :
+            le site de la cible n'est jamais contacté.
           </p>
           <div class="url-list">
             <a
-              v-for="url in wayback"
-              :key="url"
-              :href="url"
+              v-for="entry in wayback"
+              :key="entry.snapshot"
+              :href="entry.snapshot"
               target="_blank"
               rel="noopener noreferrer"
+              referrerpolicy="no-referrer"
               class="url-item"
             >
-              {{ url }}
+              {{ entry.url }}
             </a>
           </div>
         </section>
@@ -282,12 +308,12 @@ function whoisValue(value) {
 
 .osint-header {
   text-align: center;
-  margin-bottom: 26px;
+  margin-bottom: 24px;
 }
 
 .osint-title {
   margin: 6px 0 8px;
-  font-size: 1.7rem;
+  font-size: var(--fs-2xl);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--text);
@@ -296,13 +322,13 @@ function whoisValue(value) {
 .osint-subtitle {
   margin: 0 auto;
   max-width: 580px;
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   line-height: 1.6;
   color: var(--text-muted);
 }
 
 .osint-subtitle strong {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 500;
 }
 
@@ -311,7 +337,7 @@ function whoisValue(value) {
   display: flex;
   gap: 10px;
   max-width: 540px;
-  margin: 0 auto 26px;
+  margin: 0 auto 24px;
 }
 
 .osint-input-wrap {
@@ -330,13 +356,13 @@ function whoisValue(value) {
 
 .osint-input {
   width: 100%;
-  padding: 11px 14px 11px 36px;
+  padding: 12px 16px 12px 40px;
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
@@ -347,23 +373,21 @@ function whoisValue(value) {
 }
 
 .osint-input:focus {
-  outline: none;
   background: var(--glass-2);
   border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .osint-submit {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 22px;
-  background: linear-gradient(135deg, var(--accent), #6355d6);
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--accent-strong), #6355d6);
   color: #fff;
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-sm);
   font-weight: 500;
-  font-size: 0.87rem;
+  font-size: var(--fs-base);
   cursor: pointer;
   white-space: nowrap;
   box-shadow: 0 6px 22px rgba(124, 108, 245, 0.28);
@@ -400,19 +424,19 @@ function whoisValue(value) {
 .osint-error {
   text-align: center;
   color: var(--danger);
-  font-size: 0.86rem;
-  margin-bottom: 18px;
+  font-size: var(--fs-base);
+  margin-bottom: 20px;
 }
 
 .osint-warning {
   color: var(--warning);
-  font-size: 0.84rem;
+  font-size: var(--fs-sm);
   margin: 0 0 16px;
 }
 
 .empty-hint {
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   margin: 0 0 16px;
 }
 
@@ -423,20 +447,20 @@ function whoisValue(value) {
   justify-content: space-between;
   gap: 10px;
   padding-bottom: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   border-bottom: 1px solid var(--border);
 }
 
 .result-query {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 1.05rem;
+  font-size: var(--fs-md);
   color: var(--text);
   word-break: break-all;
 }
 
 .result-date {
   flex-shrink: 0;
-  font-size: 0.76rem;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
 }
 
@@ -444,7 +468,7 @@ function whoisValue(value) {
 .panels {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 14px;
+  gap: 16px;
   align-items: start;
 }
 
@@ -452,7 +476,7 @@ function whoisValue(value) {
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 17px 19px;
+  padding: 16px 20px;
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   box-shadow: var(--shadow-2);
@@ -465,30 +489,30 @@ function whoisValue(value) {
 .panel-head {
   display: flex;
   align-items: center;
-  gap: 9px;
-  margin-bottom: 3px;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
 .panel-title {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
   color: var(--text);
 }
 
 .panel-count {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-soft);
   border: 1px solid var(--accent-line);
   border-radius: 999px;
-  padding: 1px 9px;
+  padding: 1px 10px;
 }
 
 .panel-note {
-  margin: 0 0 14px;
-  font-size: 0.75rem;
+  margin: 0 0 16px;
+  font-size: var(--fs-xs);
   font-style: italic;
   color: var(--text-faint);
 }
@@ -510,14 +534,14 @@ function whoisValue(value) {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
-  gap: 5px;
+  gap: 6px;
 }
 
 .chip,
 .prefix-chip {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.72rem;
-  padding: 2px 9px;
+  font-size: var(--fs-xs);
+  padding: 2px 10px;
   background: var(--glass-2);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -531,7 +555,7 @@ function whoisValue(value) {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 7px 0;
+  padding: 8px 0;
   border-top: 1px solid var(--border);
 }
 
@@ -544,7 +568,7 @@ function whoisValue(value) {
   flex-shrink: 0;
   width: 48px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--accent-2);
@@ -561,26 +585,26 @@ function whoisValue(value) {
 .record-values {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
 .record-value {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   word-break: break-all;
 }
 
 .whois-value {
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   color: var(--text);
   word-break: break-word;
 }
 
 /* ---------- plages d'adresses ---------- */
 .range {
-  padding: 11px 0;
+  padding: 12px 0;
   border-top: 1px solid var(--border);
 }
 
@@ -594,18 +618,18 @@ function whoisValue(value) {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
 .range-prefix {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.86rem;
+  font-size: var(--fs-base);
   color: var(--text);
 }
 
 .range-asn {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--accent-2);
@@ -617,7 +641,7 @@ function whoisValue(value) {
 
 .range-country {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   color: var(--text-muted);
   border: 1px solid var(--border);
@@ -627,7 +651,7 @@ function whoisValue(value) {
 
 .range-org {
   margin: 0 0 4px;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   color: var(--text);
 }
 
@@ -637,14 +661,14 @@ function whoisValue(value) {
   gap: 4px 12px;
   margin: 0;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
 }
 
 /* ---------- espace d'adressage annonce ---------- */
 .as-block {
-  padding-top: 11px;
-  margin-top: 11px;
+  padding-top: 12px;
+  margin-top: 12px;
   border-top: 1px solid var(--border);
 }
 
@@ -657,12 +681,12 @@ function whoisValue(value) {
 .as-block-head {
   display: flex;
   align-items: center;
-  gap: 9px;
-  margin-bottom: 9px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .as-block-count {
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
 }
 
@@ -678,9 +702,9 @@ function whoisValue(value) {
 }
 
 .url-item {
-  padding: 7px 12px;
+  padding: 8px 12px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   text-decoration: none;
   word-break: break-all;
@@ -699,7 +723,7 @@ function whoisValue(value) {
 
 /* ---------- historique des recherches ---------- */
 .osint-history {
-  margin-top: 26px;
+  margin-top: 24px;
 }
 
 .history-list {
@@ -708,7 +732,7 @@ function whoisValue(value) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .history-item {
@@ -717,7 +741,7 @@ function whoisValue(value) {
   justify-content: space-between;
   gap: 10px;
   width: 100%;
-  padding: 9px 14px;
+  padding: 10px 16px;
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -733,14 +757,14 @@ function whoisValue(value) {
 
 .history-query {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.83rem;
+  font-size: var(--fs-sm);
   color: var(--text);
   word-break: break-all;
 }
 
 .history-date {
   flex-shrink: 0;
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
 }
 </style>

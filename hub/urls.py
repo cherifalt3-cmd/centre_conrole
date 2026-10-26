@@ -18,9 +18,12 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.authtoken.views import obtain_auth_token
 
+from .views import health
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-token-auth/', obtain_auth_token),
+    path('api/health/', health),
     path('api/recon/', include('recon.urls')),
     path('api/veille/', include('veille.urls')),
     path('api/kanban/', include('kanban.urls')),

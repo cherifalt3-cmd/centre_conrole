@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import Login from './components/Login.vue'
 import Dashboard from './components/Dashboard.vue'
 import TargetList from './components/TargetList.vue'
@@ -8,20 +8,98 @@ import Veille from './components/Veille.vue'
 import Kanban from './components/Kanban.vue'
 import Osint from './components/Osint.vue'
 import { authToken, logout } from './auth'
+import { apiFetch } from './api'
 import { readStored, writeStored } from './storage'
 
-const currentView = ref('dashboard')
+const VIEW_TITLES = {
+  dashboard: 'Accueil',
+  targets: 'Carnet de cibles',
+  generator: 'Générateur de commandes',
+  veille: 'Veille cybersécu & IA',
+  kanban: 'Kanban projets',
+  osint: 'OSINT automatique',
+}
+
+// La vue courante vit dans l'URL (#/veille...) : le bouton Precedent, les favoris
+// et le rechargement de page se comportent comme sur n'importe quel site.
+function viewFromHash() {
+  const view = window.location.hash.replace(/^#\/?/, '')
+  return view in VIEW_TITLES ? view : 'dashboard'
+}
+
+const currentView = ref(viewFromHash())
+const mainEl = ref(null)
+
+function setDocumentTitle(view) {
+  document.title = `${VIEW_TITLES[view]} · Centre de contrôle`
+}
+setDocumentTitle(currentView.value)
+
+function onHashChange() {
+  currentView.value = viewFromHash()
+}
+
+watch(currentView, async (view) => {
+  if (viewFromHash() !== view) window.location.hash = `/${view}`
+  setDocumentTitle(view)
+  // Place le focus sur le contenu : un lecteur d'ecran annonce la nouvelle page
+  // au lieu de rester sur le lien du menu.
+  await nextTick()
+  mainEl.value?.focus({ preventScroll: true })
+})
 
 const sidebarVisible = ref(readStored('sidebarVisible') !== 'false')
-
 watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
+
+// Animations : desactivables a la main, en plus du reglage systeme
+// prefers-reduced-motion. La classe est posee sur <html> pour couvrir aussi
+// l'ecran de connexion.
+const motionEnabled = ref(readStored('motion') !== 'off')
+watch(
+  motionEnabled,
+  (enabled) => {
+    document.documentElement.classList.toggle('motion-off', !enabled)
+    writeStored('motion', enabled ? 'on' : 'off')
+  },
+  { immediate: true },
+)
+
+// Etat reel de l'API, verifie periodiquement. L'ancien « systeme en ligne »
+// etait ecrit en dur et s'affichait meme serveur eteint.
+const STATUS_LABELS = {
+  checking: 'vérification…',
+  online: 'API en ligne',
+  offline: 'API injoignable',
+}
+const apiStatus = ref('checking')
+let healthTimer = null
+
+async function checkHealth() {
+  try {
+    const response = await apiFetch('/api/health/')
+    apiStatus.value = response.ok ? 'online' : 'offline'
+  } catch {
+    apiStatus.value = 'offline'
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('hashchange', onHashChange)
+  checkHealth()
+  healthTimer = setInterval(checkHealth, 30000)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('hashchange', onHashChange)
+  clearInterval(healthTimer)
+})
 </script>
 
 <template>
   <Login v-if="!authToken" />
 
   <div v-else class="app-shell">
-    <aside :class="['sidebar', { collapsed: !sidebarVisible }]">
+    <aside id="sidebar" :class="['sidebar', { collapsed: !sidebarVisible }]" aria-label="Modules">
       <div class="sidebar-brand">
         <img class="sidebar-logo" src="/logo.png" alt="" />
         <span class="sidebar-label">Centre de contrôle</span>
@@ -30,87 +108,87 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
       <p class="sidebar-section-label sidebar-label">Modules</p>
 
       <nav class="sidebar-nav">
-        <button
-          type="button"
+        <a
+          href="#/dashboard"
           :class="['sidebar-link', { active: currentView === 'dashboard' }]"
+          :aria-current="currentView === 'dashboard' ? 'page' : null"
           :title="!sidebarVisible ? 'Accueil' : null"
-          @click="currentView = 'dashboard'"
         >
-          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg aria-hidden="true" focusable="false" class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 11L12 4L21 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             <path d="M5 10V19A1 1 0 0 0 6 20H18A1 1 0 0 0 19 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
           <span class="sidebar-label">Accueil</span>
-        </button>
-        <button
-          type="button"
+        </a>
+        <a
+          href="#/targets"
           :class="['sidebar-link', { active: currentView === 'targets' }]"
+          :aria-current="currentView === 'targets' ? 'page' : null"
           :title="!sidebarVisible ? 'Carnet de cibles' : null"
-          @click="currentView = 'targets'"
         >
-          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg aria-hidden="true" focusable="false" class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
             <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
             <circle cx="12" cy="12" r="1.5" fill="currentColor" />
           </svg>
           <span class="sidebar-label">Carnet de cibles</span>
-        </button>
-        <button
-          type="button"
+        </a>
+        <a
+          href="#/generator"
           :class="['sidebar-link', { active: currentView === 'generator' }]"
+          :aria-current="currentView === 'generator' ? 'page' : null"
           :title="!sidebarVisible ? 'Générateur de commandes' : null"
-          @click="currentView = 'generator'"
         >
-          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg aria-hidden="true" focusable="false" class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2" />
             <path d="M6 9L10 12L6 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             <line x1="12" y1="15" x2="17" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
           <span class="sidebar-label">Générateur de commandes</span>
-        </button>
-        <button
-          type="button"
+        </a>
+        <a
+          href="#/veille"
           :class="['sidebar-link', { active: currentView === 'veille' }]"
+          :aria-current="currentView === 'veille' ? 'page' : null"
           :title="!sidebarVisible ? 'Veille cybersécu & IA' : null"
-          @click="currentView = 'veille'"
         >
-          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg aria-hidden="true" focusable="false" class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="3" y="4" width="18" height="16" rx="1" stroke="currentColor" stroke-width="2" />
             <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2" />
             <line x1="7" y1="13" x2="15" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             <line x1="7" y1="17" x2="12" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
           <span class="sidebar-label">Veille cybersécu &amp; IA</span>
-        </button>
-        <button
-          type="button"
+        </a>
+        <a
+          href="#/kanban"
           :class="['sidebar-link', { active: currentView === 'kanban' }]"
+          :aria-current="currentView === 'kanban' ? 'page' : null"
           :title="!sidebarVisible ? 'Kanban projets' : null"
-          @click="currentView = 'kanban'"
         >
-          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg aria-hidden="true" focusable="false" class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="3" y="4" width="18" height="16" rx="1" stroke="currentColor" stroke-width="2" />
             <line x1="9" y1="4" x2="9" y2="20" stroke="currentColor" stroke-width="2" />
             <line x1="15" y1="4" x2="15" y2="20" stroke="currentColor" stroke-width="2" />
           </svg>
           <span class="sidebar-label">Kanban projets</span>
-        </button>
-        <button
-          type="button"
+        </a>
+        <a
+          href="#/osint"
           :class="['sidebar-link', { active: currentView === 'osint' }]"
+          :aria-current="currentView === 'osint' ? 'page' : null"
           :title="!sidebarVisible ? 'OSINT automatique' : null"
-          @click="currentView = 'osint'"
         >
-          <svg class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg aria-hidden="true" focusable="false" class="sidebar-link-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
             <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
           <span class="sidebar-label">OSINT automatique</span>
-        </button>
+        </a>
       </nav>
 
       <div class="sidebar-doodle">
-        <svg width="104" height="104" viewBox="0 0 64 64" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+        <svg aria-hidden="true" focusable="false" width="104" height="104" viewBox="0 0 64 64" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
           <!-- mer -->
           <rect x="30" y="44" width="34" height="20" fill="#2c4f8a" />
           <rect x="30" y="44" width="34" height="3" fill="#4f86d6" />
@@ -182,7 +260,7 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
       </div>
 
       <button class="sidebar-logout" :title="!sidebarVisible ? 'Se déconnecter' : null" @click="logout">
-        <svg class="sidebar-logout-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg aria-hidden="true" focusable="false" class="sidebar-logout-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -214,20 +292,31 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
           type="button"
           class="sidebar-toggle"
           :title="sidebarVisible ? 'Masquer le menu' : 'Afficher le menu'"
+          :aria-label="sidebarVisible ? 'Masquer le menu' : 'Afficher le menu'"
+          :aria-expanded="sidebarVisible"
+          aria-controls="sidebar"
           @click="sidebarVisible = !sidebarVisible"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
         </button>
-        <span class="topbar-status">
-          <span class="topbar-dot"></span>
-          <span class="topbar-status-text">système en ligne</span>
+        <span class="topbar-status" role="status" aria-live="polite">
+          <span :class="['topbar-dot', `topbar-dot-${apiStatus}`]"></span>
+          <span class="topbar-status-text">{{ STATUS_LABELS[apiStatus] }}</span>
         </span>
+        <button
+          type="button"
+          class="topbar-motion"
+          :aria-pressed="!motionEnabled"
+          @click="motionEnabled = !motionEnabled"
+        >
+          Réduire les animations
+        </button>
       </div>
-      <main>
+      <main ref="mainEl" tabindex="-1">
         <Dashboard v-if="currentView === 'dashboard'" @navigate="currentView = $event" />
         <TargetList v-else-if="currentView === 'targets'" />
         <ToolGenerator v-else-if="currentView === 'generator'" />
@@ -321,9 +410,9 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
   overflow: hidden;
   color: var(--text);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
   letter-spacing: -0.01em;
-  padding: 4px 10px 18px;
+  padding: 4px 10px 20px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -349,7 +438,7 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
 
 .sidebar-section-label {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.63rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -360,7 +449,7 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   flex: 1;
 }
 
@@ -368,15 +457,16 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
   position: relative;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 9px 12px;
+  gap: 12px;
+  padding: 10px 12px;
   background: none;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 0.86rem;
+  font-size: var(--fs-base);
   color: var(--text-muted);
   text-align: left;
+  text-decoration: none;
   min-width: 0;
   overflow: hidden;
   transition: background 0.16s ease, color 0.16s ease;
@@ -405,7 +495,7 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
 }
 
 .sidebar-link.active .sidebar-link-icon {
-  color: var(--accent);
+  color: var(--accent-text);
   filter: drop-shadow(0 0 6px rgba(124, 108, 245, 0.7));
 }
 
@@ -513,15 +603,15 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
 .sidebar-logout {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
   margin-top: 12px;
-  padding: 13px 12px 6px;
+  padding: 12px 12px 6px;
   background: none;
   border: none;
   border-top: 1px solid var(--border);
   border-radius: 0;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--text-faint);
   text-align: left;
   min-width: 0;
@@ -675,7 +765,7 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
   left: 50%;
   width: 30px;
   height: 30px;
-  margin: -15px 0 0 -15px;
+  margin: -16px 0 0 -16px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, #fff0c4, #ffc65c 60%, #ff9d3d 90%);
   opacity: 0.5;
@@ -742,8 +832,8 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
 .main-topbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 30px;
+  gap: 16px;
+  padding: 16px 32px;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -776,9 +866,9 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
 .topbar-status {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-faint);
@@ -788,9 +878,43 @@ watch(sidebarVisible, (value) => writeStored('sidebarVisible', value))
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  background: var(--text-faint);
+}
+
+/* Seul l'etat « en ligne » pulse : une panne doit se lire d'un coup d'oeil, pas
+   ressembler a l'etat normal */
+.topbar-dot-online {
   background: var(--success);
   box-shadow: 0 0 8px var(--success);
   animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+.topbar-dot-offline {
+  background: var(--danger);
+  box-shadow: 0 0 8px var(--danger);
+}
+
+.topbar-motion {
+  margin-left: auto;
+  padding: 6px 12px;
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.topbar-motion:hover {
+  background: var(--glass-2);
+  color: var(--text);
+}
+
+.topbar-motion[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--text);
 }
 
 @keyframes pulse-dot {
@@ -802,16 +926,23 @@ main {
   position: relative;
   z-index: 1;
   flex: 1;
-  padding: 32px 30px;
+  padding: 32px 32px;
+}
+
+/* main ne recoit le focus que par programme, pour annoncer le changement de page :
+   ce n'est pas un element interactif, un contour autour de toute la page
+   n'aiderait personne. */
+main:focus {
+  outline: none;
 }
 
 .app-footer {
   position: relative;
   z-index: 1;
-  padding: 18px 30px 30px;
+  padding: 20px 32px 32px;
   text-align: center;
   color: var(--text-faint);
-  font-size: 0.76rem;
+  font-size: var(--fs-xs);
 }
 
 @media (max-width: 640px) {
@@ -826,7 +957,7 @@ main {
     position: static;
     flex-direction: row;
     align-items: center;
-    padding: 10px 14px;
+    padding: 10px 16px;
     margin: 8px;
   }
 
@@ -854,11 +985,18 @@ main {
   }
 
   main {
-    padding: 22px 16px;
+    padding: 24px 16px;
   }
 
+  /* Masque a l'ecran mais reste lu : display:none retirerait aussi l'etat aux
+     lecteurs d'ecran, et le point de couleur seul ne dit rien */
   .topbar-status-text {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 }
 </style>

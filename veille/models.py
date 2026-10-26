@@ -38,7 +38,10 @@ class Article(models.Model):
     class Meta:
         # nulls_last explicite : SQLite range les dates nulles en fin de tri
         # descendant, PostgreSQL au debut, ou elles passeraient devant tout le reste.
-        ordering = [models.F('published_at').desc(nulls_last=True)]
+        # '-id' departage les ex aequo (meme date, ou pas de date) : sans cle unique,
+        # la base peut les renvoyer dans un ordre different a chaque requete, et la
+        # pagination affiche alors des doublons tout en sautant d'autres articles.
+        ordering = [models.F('published_at').desc(nulls_last=True), '-id']
         indexes = [
             # Index simple et non fonctionnel : SQLite refuse NULLS LAST dans un
             # CREATE INDEX. Comme il range NULL en plus petite valeur, un parcours

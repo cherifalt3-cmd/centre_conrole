@@ -1,6 +1,46 @@
-from django.test import SimpleTestCase
+from unittest.mock import MagicMock, patch
 
-from .sources import _keep_subdomain, _parse_cymru, _parse_whois_text, normalize_domain
+from django.test import SimpleTestCase, TestCase
+from rest_framework.test import APIClient
+
+from .sources import (
+    _keep_subdomain, _parse_cymru, _parse_whois_text, fetch_wayback, normalize_domain,
+)
+
+
+class FetchWaybackTests(SimpleTestCase):
+    def test_pointe_vers_la_copie_archivee_et_non_vers_la_cible(self):
+        # Un lien vers l'URL d'origine ferait contacter la cible au moindre clic
+        cdx = [
+            ['timestamp', 'original'],
+            ['20190312084511', 'https://exemple.com/admin/'],
+        ]
+        response = MagicMock()
+        response.json.return_value = cdx
+        response.raise_for_status.return_value = None
+
+        with patch('osint.sources.requests.get', return_value=response):
+            entries = fetch_wayback('exemple.com')
+
+        self.assertEqual(entries, [{
+            'url': 'https://exemple.com/admin/',
+            'snapshot': 'https://web.archive.org/web/20190312084511/https://exemple.com/admin/',
+        }])
+
+    def test_aucune_archive(self):
+        response = MagicMock()
+        response.json.return_value = []
+        response.raise_for_status.return_value = None
+        with patch('osint.sources.requests.get', return_value=response):
+            self.assertEqual(fetch_wayback('exemple.com'), [])
+
+
+class HealthEndpointTests(TestCase):
+    def test_repond_sans_authentification(self):
+        # L'indicateur de la barre superieure doit pouvoir s'afficher meme deconnecte
+        response = APIClient().get('/api/health/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {'status': 'ok'})
 
 
 # Reponse reelle de whois.nic.dz pour poste.dz, telle que recue le 26/10/2026

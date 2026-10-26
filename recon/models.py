@@ -1,4 +1,26 @@
+from urllib.parse import urlsplit, urlunsplit
+
 from django.db import models
+
+
+def normalize_address(value):
+    """Forme canonique d'une adresse de cible.
+
+    Seuls le schema et l'hote passent en minuscules : ils sont insensibles a la
+    casse. Le chemin et la requete sont conserves tels quels, car ils sont
+    sensibles a la casse sur la plupart des serveurs : /Admin et /admin peuvent
+    etre deux ressources differentes.
+    """
+    value = value.strip()
+
+    if '://' in value:
+        parts = urlsplit(value)
+        userinfo, at, hostport = parts.netloc.rpartition('@')
+        netloc = f'{userinfo}{at}{hostport.lower()}'
+        return urlunsplit((parts.scheme.lower(), netloc, parts.path, parts.query, parts.fragment))
+
+    host, separator, rest = value.partition('/')
+    return f'{host.lower()}{separator}{rest}'
 
 
 class Target(models.Model):
@@ -6,6 +28,17 @@ class Target(models.Model):
     address = models.CharField(max_length=255, unique=True, help_text="Adresse IP ou domaine")
     date_added = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
+
+    def clean(self):
+        # full_clean() appelle clean() avant validate_unique() : l'admin verifie
+        # donc l'unicite sur la valeur deja normalisee.
+        self.address = normalize_address(self.address)
+
+    def save(self, *args, **kwargs):
+        # Tout chemin d'ecriture passe par ici (API, admin, shell) : la regle ne
+        # depend plus de l'outil utilise pour creer la cible.
+        self.address = normalize_address(self.address)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name or self.address

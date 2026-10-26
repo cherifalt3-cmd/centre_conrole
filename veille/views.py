@@ -5,6 +5,7 @@ from datetime import datetime, timezone as dt_timezone
 import feedparser
 import requests
 from django.conf import settings
+from django.db import transaction
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -199,32 +200,41 @@ class RefreshFeedsView(APIView):
         """
         response = requests.get(source.url, timeout=FEED_TIMEOUT, headers=FEED_HEADERS)
         response.raise_for_status()
-        parsed = feedparser.parse(response.content)
+        # Les en-tetes HTTP accompagnent les octets : un serveur qui ne declare son
+        # encodage que dans Content-Type serait sinon decode a l'aveugle.
+        parsed = feedparser.parse(
+            response.content,
+            response_headers={key.lower(): value for key, value in response.headers.items()},
+        )
 
+        # Tout ou rien par source : si un article fait echouer l'import en cours de
+        # route, les precedents sont annules. La source est alors signalee en echec
+        # sans avoir importe en silence des articles que le compteur ignorerait.
         created_count = 0
-        for entry in parsed.entries:
-            link = entry.get('link')
-            if not link:
-                continue
+        with transaction.atomic():
+            for entry in parsed.entries:
+                link = entry.get('link')
+                if not link:
+                    continue
 
-            published_at = None
-            if entry.get('published_parsed'):
-                published_at = datetime(*entry.published_parsed[:6], tzinfo=dt_timezone.utc)
+                published_at = None
+                if entry.get('published_parsed'):
+                    published_at = datetime(*entry.published_parsed[:6], tzinfo=dt_timezone.utc)
 
-            title = strip_html(entry.get('title', ''))
-            summary = strip_html(entry.get('summary', ''))
+                title = strip_html(entry.get('title', ''))
+                summary = strip_html(entry.get('summary', ''))
 
-            _, created = Article.objects.get_or_create(
-                link=link,
-                defaults={
-                    'source': source,
-                    'title': title,
-                    'summary': summary,
-                    'severity': detect_severity(f'{title} {summary}'),
-                    'published_at': published_at,
-                },
-            )
-            if created:
-                created_count += 1
+                _, created = Article.objects.get_or_create(
+                    link=link,
+                    defaults={
+                        'source': source,
+                        'title': title,
+                        'summary': summary,
+                        'severity': detect_severity(f'{title} {summary}'),
+                        'published_at': published_at,
+                    },
+                )
+                if created:
+                    created_count += 1
 
         return created_count

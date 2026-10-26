@@ -39,16 +39,68 @@ function filterCatalogEntries(option) {
 function selectCatalogEntry(optionId, value) {
   optionValues[optionId] = value
   openCatalogFor.value = null
+  activeIndex.value = -1
 }
 
+// Navigation clavier des listes de suggestions, selon le motif « combobox » de
+// WAI-ARIA : le focus reste dans le champ, les fleches parcourent la liste,
+// Entree choisit, Echap ferme. Une seule liste est ouverte a la fois, d'ou un
+// seul index actif partage.
+const activeIndex = ref(-1)
+
+function handleListKeydown(event, items, { select, open, close }) {
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault()
+    open()
+    if (!items.length) return
+    const next = activeIndex.value + (event.key === 'ArrowDown' ? 1 : -1)
+    activeIndex.value = next < 0 ? items.length - 1 : next % items.length
+  } else if (event.key === 'Enter' && items[activeIndex.value]) {
+    event.preventDefault()
+    select(items[activeIndex.value])
+  } else if (event.key === 'Escape') {
+    close()
+    activeIndex.value = -1
+  }
+}
+
+function onToolKeydown(event) {
+  handleListKeydown(event, toolResults.value, {
+    select: selectTool,
+    open: () => (openToolDropdown.value = true),
+    close: () => (openToolDropdown.value = false),
+  })
+}
+
+function onCatalogKeydown(event, option) {
+  if (!option.catalog) return
+  handleListKeydown(event, filterCatalogEntries(option), {
+    select: (entry) => selectCatalogEntry(option.id, entry.value),
+    open: () => (openCatalogFor.value = option.id),
+    close: () => (openCatalogFor.value = null),
+  })
+}
+
+const loadError = ref('')
+
 async function fetchTools() {
-  const response = await apiFetch('/api/recon/tools/')
-  tools.value = await response.json()
+  try {
+    const response = await apiFetch('/api/recon/tools/')
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    tools.value = await response.json()
+  } catch {
+    loadError.value = 'Impossible de charger les outils et les suggestions.'
+  }
 }
 
 async function fetchPresets() {
-  const response = await apiFetch('/api/recon/command-presets/')
-  presets.value = await response.json()
+  try {
+    const response = await apiFetch('/api/recon/command-presets/')
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    presets.value = await response.json()
+  } catch {
+    loadError.value = 'Impossible de charger les outils et les suggestions.'
+  }
 }
 
 onMounted(() => {
@@ -170,6 +222,7 @@ function selectTool(tool) {
   selectedToolId.value = tool.id
   toolSearch.value = tool.name
   openToolDropdown.value = false
+  activeIndex.value = -1
 }
 
 function closeToolDropdownSoon() {
@@ -266,18 +319,21 @@ watch(generatedCommand, (cmd) => {
     <div class="top-panel">
       <div class="target-fields">
         <div>
-          <label class="step-label">Adresse de la cible</label>
-          <input v-model="address" type="text" class="address-input" placeholder="Ex : 192.168.1.10" />
+          <label class="step-label" for="target-address">Adresse de la cible</label>
+          <input id="target-address" v-model="address" type="text" class="address-input" placeholder="Ex : 192.168.1.10" />
         </div>
         <div>
-          <label class="step-label">Nom de domaine</label>
-          <input v-model="domain" type="text" class="address-input" placeholder="Ex : exemple.com" />
+          <label class="step-label" for="target-domain">Nom de domaine</label>
+          <input id="target-domain" v-model="domain" type="text" class="address-input" placeholder="Ex : exemple.com" />
         </div>
       </div>
 
+      <p v-if="loadError" class="load-error" role="alert">{{ loadError }}</p>
+
       <div class="result sticky-result">
-        <label class="step-label">Commande (modifiable)</label>
+        <label class="step-label" for="custom-command">Commande (modifiable)</label>
         <textarea
+          id="custom-command"
           v-model="customCommand"
           class="command-edit"
           rows="2"
@@ -296,6 +352,7 @@ watch(generatedCommand, (cmd) => {
             <button
               type="button"
               :class="['filter-btn', { active: activeCategory === null }]"
+              :aria-pressed="Boolean(activeCategory === null)"
               @click="activeCategory = null; activeMetasploitService = null"
             >
               Tous
@@ -305,6 +362,7 @@ watch(generatedCommand, (cmd) => {
               :key="category"
               type="button"
               :class="['filter-btn', { active: activeCategory === category }]"
+              :aria-pressed="Boolean(activeCategory === category)"
               @click="activeCategory = category; activeMetasploitService = null"
             >
               {{ category }}
@@ -315,6 +373,7 @@ watch(generatedCommand, (cmd) => {
             <button
               type="button"
               :class="['filter-btn', 'filter-btn-sub', { active: activeMetasploitService === null }]"
+              :aria-pressed="Boolean(activeMetasploitService === null)"
               @click="activeMetasploitService = null"
             >
               Tous services
@@ -324,6 +383,7 @@ watch(generatedCommand, (cmd) => {
               :key="service"
               type="button"
               :class="['filter-btn', 'filter-btn-sub', { active: activeMetasploitService === service }]"
+              :aria-pressed="Boolean(activeMetasploitService === service)"
               @click="activeMetasploitService = service"
             >
               {{ service }}
@@ -359,12 +419,14 @@ watch(generatedCommand, (cmd) => {
         <div v-else class="builder-section">
           <div class="builder-row">
             <div class="phase-buttons">
-              <button type="button" :class="['phase-btn', { active: phase === null }]" @click="phase = null">
+              <button type="button" :class="['phase-btn', { active: phase === null }]"
+ :aria-pressed="Boolean(phase === null)" @click="phase = null">
                 Tous
               </button>
               <button
                 type="button"
                 :class="['phase-btn', { active: phase === 'passive' }]"
+                :aria-pressed="Boolean(phase === 'passive')"
                 @click="selectPhase('passive')"
               >
                 Passive
@@ -372,6 +434,7 @@ watch(generatedCommand, (cmd) => {
               <button
                 type="button"
                 :class="['phase-btn', { active: phase === 'active' }]"
+                :aria-pressed="Boolean(phase === 'active')"
                 @click="selectPhase('active')"
               >
                 Active
@@ -384,15 +447,27 @@ watch(generatedCommand, (cmd) => {
                 v-model="toolSearch"
                 class="chip-input tool-search"
                 placeholder="Chercher un outil..."
-                @focus="openToolDropdown = true"
+                role="combobox"
+                aria-label="Chercher un outil"
+                aria-autocomplete="list"
+                aria-controls="tool-listbox"
+                :aria-expanded="openToolDropdown"
+                :aria-activedescendant="openToolDropdown && activeIndex >= 0 ? `tool-option-${activeIndex}` : null"
+                @focus="openToolDropdown = true; activeIndex = -1"
+                @input="openToolDropdown = true; activeIndex = -1"
+                @keydown="onToolKeydown"
                 @blur="closeToolDropdownSoon"
               />
-              <div v-if="openToolDropdown" class="catalog-dropdown">
+              <div v-if="openToolDropdown" id="tool-listbox" role="listbox" aria-label="Outils" class="catalog-dropdown">
                 <button
-                  v-for="tool in toolResults"
+                  v-for="(tool, index) in toolResults"
+                  :id="`tool-option-${index}`"
                   :key="tool.id"
                   type="button"
-                  class="catalog-item"
+                  role="option"
+                  tabindex="-1"
+                  :aria-selected="index === activeIndex"
+                  :class="['catalog-item', { highlighted: index === activeIndex }]"
                   @mousedown.prevent="selectTool(tool)"
                 >
                   <span class="catalog-value">{{ tool.name }}</span>
@@ -414,6 +489,7 @@ watch(generatedCommand, (cmd) => {
                 v-if="option.option_type === 'switch'"
                 type="button"
                 :class="['chip', { active: optionValues[option.id] }]"
+                :aria-pressed="Boolean(optionValues[option.id])"
                 @click="optionValues[option.id] = !optionValues[option.id]"
               >
                 {{ option.flag }}
@@ -425,6 +501,7 @@ watch(generatedCommand, (cmd) => {
                   :key="choice.id"
                   type="button"
                   :class="['chip', { active: optionValues[option.id] === choice.value }]"
+                  :aria-pressed="Boolean(optionValues[option.id] === choice.value)"
                   @click="selectSingleChoice(option.id, choice.value)"
                 >
                   {{ choice.label }}
@@ -437,6 +514,7 @@ watch(generatedCommand, (cmd) => {
                   :key="choice.id"
                   type="button"
                   :class="['chip', { active: optionValues[option.id]?.includes(choice.value) }]"
+                  :aria-pressed="Boolean(optionValues[option.id]?.includes(choice.value))"
                   @click="toggleMultiChoice(option.id, choice.value)"
                 >
                   {{ choice.label }}
@@ -449,15 +527,37 @@ watch(generatedCommand, (cmd) => {
                   v-model="optionValues[option.id]"
                   class="chip-input"
                   placeholder="Valeur..."
-                  @focus="openCatalogFor = option.catalog ? option.id : null"
+                  :aria-label="option.label"
+                  :role="option.catalog ? 'combobox' : null"
+                  :aria-autocomplete="option.catalog ? 'list' : null"
+                  :aria-controls="option.catalog ? `catalog-${option.id}-listbox` : null"
+                  :aria-expanded="option.catalog ? openCatalogFor === option.id : null"
+                  :aria-activedescendant="
+                    openCatalogFor === option.id && activeIndex >= 0
+                      ? `catalog-${option.id}-option-${activeIndex}`
+                      : null
+                  "
+                  @focus="openCatalogFor = option.catalog ? option.id : null; activeIndex = -1"
+                  @input="activeIndex = -1"
+                  @keydown="onCatalogKeydown($event, option)"
                   @blur="closeCatalogSoon(option.id)"
                 />
-                <div v-if="option.catalog && openCatalogFor === option.id" class="catalog-dropdown">
+                <div
+                  v-if="option.catalog && openCatalogFor === option.id"
+                  :id="`catalog-${option.id}-listbox`"
+                  role="listbox"
+                  :aria-label="option.label"
+                  class="catalog-dropdown"
+                >
                   <button
-                    v-for="entry in filterCatalogEntries(option)"
+                    v-for="(entry, index) in filterCatalogEntries(option)"
+                    :id="`catalog-${option.id}-option-${index}`"
                     :key="entry.id"
                     type="button"
-                    class="catalog-item"
+                    role="option"
+                    tabindex="-1"
+                    :aria-selected="index === activeIndex"
+                    :class="['catalog-item', { highlighted: index === activeIndex }]"
                     @mousedown.prevent="selectCatalogEntry(option.id, entry.value)"
                   >
                     <span class="catalog-value">{{ entry.value }}</span>
@@ -477,6 +577,7 @@ watch(generatedCommand, (cmd) => {
         <button
           type="button"
           :class="['tab-btn', { active: activeTab === 'suggestions' }]"
+          :aria-pressed="Boolean(activeTab === 'suggestions')"
           @click="activeTab = 'suggestions'"
         >
           <span class="tab-btn-label">Suggestions</span>
@@ -485,6 +586,7 @@ watch(generatedCommand, (cmd) => {
         <button
           type="button"
           :class="['tab-btn', { active: activeTab === 'builder' }]"
+          :aria-pressed="Boolean(activeTab === 'builder')"
           @click="activeTab = 'builder'"
         >
           <span class="tab-btn-label">Construire</span>
@@ -520,10 +622,10 @@ watch(generatedCommand, (cmd) => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.05);
   border-bottom: 1px solid var(--border);
-  padding: 9px 14px;
+  padding: 10px 16px;
 }
 
 .dot {
@@ -548,7 +650,7 @@ watch(generatedCommand, (cmd) => {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
   font-family: 'IBM Plex Mono', monospace;
   white-space: nowrap;
@@ -561,8 +663,8 @@ watch(generatedCommand, (cmd) => {
   color: var(--success);
   text-shadow: 0 0 14px rgba(61, 220, 151, 0.45);
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 1.02rem;
-  padding: 18px 26px 22px;
+  font-size: var(--fs-md);
+  padding: 20px 24px 24px;
   margin: 0;
   white-space: normal;
 }
@@ -625,7 +727,7 @@ watch(generatedCommand, (cmd) => {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  padding: 13px 16px;
+  padding: 12px 16px;
   border: 1px solid var(--border);
   background: var(--glass-1);
   border-radius: var(--radius);
@@ -642,13 +744,13 @@ watch(generatedCommand, (cmd) => {
 }
 
 .tab-btn-label {
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   font-weight: 600;
   color: var(--text);
 }
 
 .tab-btn-sub {
-  font-size: 0.73rem;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
 }
 
@@ -676,7 +778,7 @@ watch(generatedCommand, (cmd) => {
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 20px;
+  padding: 20px 20px;
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   box-shadow: var(--shadow-2);
@@ -690,13 +792,13 @@ watch(generatedCommand, (cmd) => {
 }
 
 .filter-btn {
-  padding: 5px 13px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
   background: var(--glass-1);
   color: var(--text-muted);
   border-radius: 999px;
   cursor: pointer;
-  font-size: 0.79rem;
+  font-size: var(--fs-sm);
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -717,8 +819,8 @@ watch(generatedCommand, (cmd) => {
 }
 
 .filter-btn-sub {
-  padding: 3px 10px;
-  font-size: 0.73rem;
+  padding: 4px 10px;
+  font-size: var(--fs-xs);
 }
 
 .preset-grid-wrap {
@@ -742,7 +844,7 @@ watch(generatedCommand, (cmd) => {
   align-items: flex-start;
   gap: 6px;
   text-align: left;
-  padding: 13px 15px;
+  padding: 12px 16px;
   border: 1px solid var(--border);
   background: var(--glass-1);
   border-radius: var(--radius-sm);
@@ -759,11 +861,11 @@ watch(generatedCommand, (cmd) => {
 
 .preset-badge {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.63rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 2px 9px;
+  padding: 2px 10px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--glass-2);
@@ -833,13 +935,13 @@ watch(generatedCommand, (cmd) => {
 
 .preset-label {
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   color: var(--text);
 }
 
 .preset-preview {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   word-break: break-all;
   line-height: 1.5;
@@ -847,13 +949,13 @@ watch(generatedCommand, (cmd) => {
 
 .command-edit {
   width: 100%;
-  padding: 11px 13px;
+  padding: 12px 12px;
   background: rgba(7, 8, 12, 0.6);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--success);
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.87rem;
+  font-size: var(--fs-base);
   line-height: 1.6;
   resize: vertical;
   margin-bottom: 10px;
@@ -865,9 +967,7 @@ watch(generatedCommand, (cmd) => {
 }
 
 .command-edit:focus {
-  outline: none;
   border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .tok-base {
@@ -891,12 +991,12 @@ watch(generatedCommand, (cmd) => {
 .step-label {
   display: block;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-faint);
-  margin-bottom: 9px;
+  margin-bottom: 10px;
 }
 
 .builder-row {
@@ -904,7 +1004,7 @@ watch(generatedCommand, (cmd) => {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .phase-buttons {
@@ -913,13 +1013,13 @@ watch(generatedCommand, (cmd) => {
 }
 
 .phase-btn {
-  padding: 7px 16px;
+  padding: 8px 16px;
   border: 1px solid var(--border);
   background: var(--glass-1);
   color: var(--text-muted);
   border-radius: 999px;
   cursor: pointer;
-  font-size: 0.83rem;
+  font-size: var(--fs-sm);
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -947,7 +1047,7 @@ watch(generatedCommand, (cmd) => {
   border-radius: var(--radius-sm);
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.87rem;
+  font-size: var(--fs-base);
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
@@ -957,15 +1057,13 @@ watch(generatedCommand, (cmd) => {
 }
 
 .address-input:focus {
-  outline: none;
   background: var(--glass-2);
   border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .empty-hint {
   color: var(--text-muted);
-  font-size: 0.86rem;
+  font-size: var(--fs-base);
   margin-top: 8px;
 }
 
@@ -977,12 +1075,12 @@ watch(generatedCommand, (cmd) => {
 
 .option-section-label {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.66rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-faint);
-  margin: 0 0 9px;
+  margin: 0 0 10px;
 }
 
 .option-section-row {
@@ -996,25 +1094,25 @@ watch(generatedCommand, (cmd) => {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 7px 11px;
+  padding: 8px 12px;
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
 
 .option-tag {
-  font-size: 0.76rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
 .chip {
-  padding: 6px 13px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
   background: var(--glass-2);
   color: var(--text-muted);
   border-radius: 999px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-family: 'IBM Plex Mono', monospace;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
@@ -1038,12 +1136,12 @@ watch(generatedCommand, (cmd) => {
 }
 
 .chip-input {
-  padding: 6px 13px;
+  padding: 6px 12px;
   background: var(--glass-1);
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   min-width: 160px;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
@@ -1053,17 +1151,15 @@ watch(generatedCommand, (cmd) => {
 }
 
 .chip-input:focus {
-  outline: none;
   background: var(--glass-2);
   border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .catalog-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 5px;
+  margin-top: 6px;
   background: rgba(16, 18, 28, 0.96);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -1082,7 +1178,7 @@ watch(generatedCommand, (cmd) => {
   align-items: flex-start;
   gap: 2px;
   width: 100%;
-  padding: 9px 13px;
+  padding: 10px 12px;
   background: none;
   border: none;
   border-bottom: 1px solid var(--border);
@@ -1095,31 +1191,39 @@ watch(generatedCommand, (cmd) => {
   border-bottom: none;
 }
 
-.catalog-item:hover {
+/* La suggestion surlignee au clavier doit se voir comme celle survolee a la souris */
+.catalog-item:hover,
+.catalog-item.highlighted {
   background: var(--accent-soft);
+}
+
+.load-error {
+  color: var(--danger);
+  font-size: var(--fs-base);
+  margin: 12px 0 0;
 }
 
 .catalog-value {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.83rem;
+  font-size: var(--fs-sm);
   color: var(--accent-2);
   font-weight: 500;
 }
 
 .catalog-desc {
-  font-size: 0.76rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
 .catalog-empty {
-  padding: 10px 13px;
-  font-size: 0.8rem;
+  padding: 10px 12px;
+  font-size: var(--fs-sm);
   color: var(--text-faint);
   margin: 0;
 }
 
 .result {
-  margin-top: 18px;
+  margin-top: 20px;
 }
 
 .sticky-result {
@@ -1128,7 +1232,7 @@ watch(generatedCommand, (cmd) => {
   z-index: 5;
   background: rgba(14, 16, 26, 0.86);
   border: 1px solid var(--border-strong);
-  padding: 14px 15px;
+  padding: 16px 16px;
   border-radius: var(--radius);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
@@ -1136,12 +1240,12 @@ watch(generatedCommand, (cmd) => {
 }
 
 .copy-btn {
-  padding: 9px 18px;
-  background: linear-gradient(135deg, var(--accent), #6355d6);
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--accent-strong), #6355d6);
   color: #fff;
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: var(--fs-base);
   font-weight: 500;
   cursor: pointer;
   box-shadow: 0 6px 22px rgba(124, 108, 245, 0.28);

@@ -10,16 +10,24 @@
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.15);
 
-  /* texte */
+  /* texte — chaque teinte atteint au moins 4,7:1 sur le fond le plus clair
+     (zone nebuleuse #171a2e), au-dessus du seuil WCAG AA de 4,5:1 */
   --text: #e9ebf2;
   --text-muted: #9aa2b5;
-  --text-faint: #6a7183;
+  --text-faint: #7f8698;
 
-  /* accents */
-  --accent: #7c6cf5;
+  /* accents — le violet a trois roles car une seule teinte ne peut pas les tenir
+     tous : eclairci, il devient lisible en texte sur fond sombre ; assombri, il
+     porte du texte blanc. */
+  --accent: #7c6cf5;          /* halos, bordures, icones */
+  --accent-text: #8373fc;     /* texte violet sur fond sombre (4,76:1) */
+  --accent-strong: #6e5ee7;   /* fond des boutons sous texte blanc (4,75:1) */
   --accent-2: #4f9cf9;
   --accent-soft: rgba(124, 108, 245, 0.14);
   --accent-line: rgba(124, 108, 245, 0.32);
+
+  /* anneau de focus clavier : 7,3:1 sur le fond, bien au-dela des 3:1 exiges */
+  --focus-ring: #a99cff;
 
   /* états */
   --success: #3ddc97;
@@ -41,10 +49,26 @@
   --sev-low: #9aa2b5;
   --sev-low-soft: rgba(255, 255, 255, 0.06);
 
-  /* géométrie */
+  /* geometrie */
   --radius-sm: 9px;
   --radius: 14px;
   --radius-lg: 20px;
+
+  /* echelle typographique — 8 tailles au lieu des 34 valeurs dispersees qui
+     existaient. Le plancher de 12px est la plus petite taille lisible retenue
+     (Apple HIG : 11pt minimum, Material 3 : 11sp pour ses plus petits libelles). */
+  --fs-xs: 0.75rem;    /* 12px  etiquettes, badges, metadonnees */
+  --fs-sm: 0.8125rem;  /* 13px  texte secondaire */
+  --fs-base: 0.875rem; /* 14px  texte courant */
+  --fs-md: 1rem;       /* 16px  texte mis en avant */
+  --fs-lg: 1.125rem;   /* 18px */
+  --fs-xl: 1.375rem;   /* 22px  titres de section */
+  --fs-2xl: 1.75rem;   /* 28px  titres de page, chiffres cles */
+  --fs-3xl: 2.25rem;   /* 36px  titres d'apparat */
+
+  /* echelle d'espacement : toutes les marges et espacements internes sont pris
+     dans 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64 px. Seul 1px fait
+     exception, reserve aux filets et aux bordures en degrade. */
 
   /* profondeur */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -89,7 +113,7 @@ button {
 /* étiquette technique en petites capitales espacées */
 .eyebrow {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -109,6 +133,47 @@ button {
 ::selection {
   background: var(--accent-soft);
   color: #fff;
+}
+
+/* Focus clavier visible partout (WCAG 2.4.7). :focus-visible ne s'allume qu'a la
+   navigation au clavier : un clic souris sur un bouton ne l'affiche pas. :where()
+   garde une specificite nulle pour que les composants puissent l'affiner. */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Libelle lu par les lecteurs d'ecran mais invisible a l'ecran, pour les champs
+   dont le role est deja evident visuellement (barre de recherche, ajout de carte). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Mouvement reduit (WCAG 2.2.2) : suit le reglage du systeme, et le bouton
+   « Animations » de la barre superieure pose .motion-off sur <html>. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.motion-off *,
+.motion-off *::before,
+.motion-off *::after {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
 }
 
 /* barres de défilement discrètes */

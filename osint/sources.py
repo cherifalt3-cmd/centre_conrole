@@ -273,7 +273,7 @@ def fetch_wayback(domain):
         params={
             'url': f'{domain}/*',
             'output': 'json',
-            'fl': 'original',
+            'fl': 'timestamp,original',
             'collapse': 'urlkey',
             'limit': WAYBACK_LIMIT,
         },
@@ -283,8 +283,13 @@ def fetch_wayback(domain):
     response.raise_for_status()
 
     rows = response.json()
-    # La premiere ligne du CDX est l'en-tete des colonnes
-    return [row[0] for row in rows[1:]] if len(rows) > 1 else []
+    # La premiere ligne du CDX est l'en-tete des colonnes. On garde l'adresse de la
+    # copie archivee a cote de l'URL d'origine : l'interface doit pointer vers
+    # l'archive, sinon un clic contacterait la cible et sortirait du mode passif.
+    return [
+        {'url': original, 'snapshot': f'https://web.archive.org/web/{timestamp}/{original}'}
+        for timestamp, original in rows[1:]
+    ]
 
 
 def _parse_cymru(raw):
