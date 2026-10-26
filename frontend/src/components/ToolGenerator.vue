@@ -765,7 +765,7 @@ watch(generatedCommand, (cmd) => {
 }
 
 .tab-btn.active .tab-btn-sub {
-  color: #a396ff;
+  color: var(--accent-text);
 }
 
 .tab-content {
@@ -887,13 +887,13 @@ watch(generatedCommand, (cmd) => {
 .badge-ssh {
   background: var(--glass-3);
   border-color: var(--border-strong);
-  color: #b9c2d6;
+  color: var(--text);
 }
 
 .badge-http {
-  background: var(--accent-soft);
+  background: var(--accent-tint);
   border-color: var(--accent-line);
-  color: #a396ff;
+  color: var(--accent-text);
 }
 
 .badge-smtp {
@@ -903,7 +903,7 @@ watch(generatedCommand, (cmd) => {
 }
 
 .badge-sql {
-  background: rgba(154, 214, 100, 0.12);
+  background: rgba(154, 214, 100, 0.08);
   border-color: rgba(154, 214, 100, 0.25);
   color: #9ad664;
 }
@@ -922,9 +922,9 @@ watch(generatedCommand, (cmd) => {
 }
 
 .badge-metasploit {
-  background: rgba(160, 130, 255, 0.14);
+  background: rgba(160, 130, 255, 0.08);
   border-color: rgba(160, 130, 255, 0.3);
-  color: #b39dff;
+  color: #bfa9ff;
 }
 
 .badge-snmp {
@@ -951,7 +951,7 @@ watch(generatedCommand, (cmd) => {
   width: 100%;
   padding: 12px 12px;
   background: rgba(7, 8, 12, 0.6);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
   color: var(--success);
   font-family: 'IBM Plex Mono', monospace;
@@ -967,7 +967,7 @@ watch(generatedCommand, (cmd) => {
 }
 
 .command-edit:focus {
-  border-color: var(--accent-line);
+  border-color: var(--accent);
 }
 
 .tok-base {
@@ -1043,7 +1043,7 @@ watch(generatedCommand, (cmd) => {
   width: 100%;
   padding: 10px 12px;
   background: var(--glass-1);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
@@ -1058,7 +1058,7 @@ watch(generatedCommand, (cmd) => {
 
 .address-input:focus {
   background: var(--glass-2);
-  border-color: var(--accent-line);
+  border-color: var(--accent);
 }
 
 .empty-hint {
@@ -1138,7 +1138,7 @@ watch(generatedCommand, (cmd) => {
 .chip-input {
   padding: 6px 12px;
   background: var(--glass-1);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 999px;
   color: var(--text);
   font-size: var(--fs-sm);
@@ -1152,7 +1152,7 @@ watch(generatedCommand, (cmd) => {
 
 .chip-input:focus {
   background: var(--glass-2);
-  border-color: var(--accent-line);
+  border-color: var(--accent);
 }
 
 .catalog-dropdown {

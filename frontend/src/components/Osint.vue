@@ -358,7 +358,7 @@ function whoisValue(value) {
   width: 100%;
   padding: 12px 16px 12px 40px;
   background: var(--glass-1);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
@@ -374,7 +374,7 @@ function whoisValue(value) {
 
 .osint-input:focus {
   background: var(--glass-2);
-  border-color: var(--accent-line);
+  border-color: var(--accent);
 }
 
 .osint-submit {
@@ -504,7 +504,7 @@ function whoisValue(value) {
   font-size: var(--fs-xs);
   font-weight: 500;
   color: var(--accent-text);
-  background: var(--accent-soft);
+  background: var(--accent-tint);
   border: 1px solid var(--accent-line);
   border-radius: 999px;
   padding: 1px 10px;

@@ -258,7 +258,7 @@ h2 {
 .edit-form input {
   padding: 10px 12px;
   background: var(--glass-1);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
   color: var(--text);
   font-size: var(--fs-base);
@@ -311,7 +311,7 @@ h2 {
 .notes-input:focus,
 .edit-form input:focus {
   background: var(--glass-2);
-  border-color: var(--accent-line);
+  border-color: var(--accent);
 }
 
 .add-form button {
@@ -427,7 +427,7 @@ h2 {
 .copy-address-btn:hover {
   background: var(--accent-soft);
   border-color: var(--accent-line);
-  color: var(--accent-text);
+  color: var(--text);
 }
 
 .item-actions {
@@ -456,14 +456,21 @@ h2 {
 .cancel-btn:hover {
   background: var(--accent-soft);
   border-color: var(--accent-line);
-  color: var(--accent-text);
+  color: var(--text);
 }
 
-.delete-btn:hover,
-.delete-btn.armed {
+.delete-btn:hover {
   background: var(--danger-soft);
   border-color: var(--danger);
   color: var(--danger);
+}
+
+/* L'etat arme est plein : une action irreversible doit se distinguer nettement
+   d'un simple survol, et un rouge sur fond rougi n'atteignait que 4,08:1 */
+.delete-btn.armed {
+  background: var(--danger-strong);
+  border-color: var(--danger-strong);
+  color: #fff;
 }
 
 .edit-form {

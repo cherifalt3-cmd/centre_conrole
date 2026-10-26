@@ -393,7 +393,7 @@ h2 {
 .move-btn:hover:not(:disabled) {
   background: var(--accent-soft);
   border-color: var(--accent-line);
-  color: var(--accent-text);
+  color: var(--text);
 }
 
 .move-btn:disabled {
@@ -419,11 +419,18 @@ h2 {
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.delete-card-btn:hover,
-.delete-card-btn.armed {
+.delete-card-btn:hover {
   background: var(--danger-soft);
   border-color: var(--danger);
   color: var(--danger);
+}
+
+/* L'etat arme est plein : une action irreversible doit se distinguer nettement
+   d'un simple survol, et un rouge sur fond rougi n'atteignait que 4,08:1 */
+.delete-card-btn.armed {
+  background: var(--danger-strong);
+  border-color: var(--danger-strong);
+  color: #fff;
 }
 
 .delete-confirm {
@@ -449,7 +456,7 @@ h2 {
   min-width: 0;
   padding: 8px 12px;
   background: var(--glass-1);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
   color: var(--text);
   font-size: var(--fs-sm);
@@ -462,14 +469,14 @@ h2 {
 
 .add-card-form input:focus {
   background: var(--glass-2);
-  border-color: var(--accent-line);
+  border-color: var(--accent);
 }
 
 .add-card-form button {
   flex-shrink: 0;
   width: 34px;
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--text);
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-sm);
   font-size: var(--fs-md);

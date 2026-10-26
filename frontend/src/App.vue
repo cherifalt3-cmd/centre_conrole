@@ -7,9 +7,11 @@ import ToolGenerator from './components/ToolGenerator.vue'
 import Veille from './components/Veille.vue'
 import Kanban from './components/Kanban.vue'
 import Osint from './components/Osint.vue'
+import SpaceBackground from './components/SpaceBackground.vue'
 import { authToken, logout } from './auth'
 import { apiFetch } from './api'
 import { readStored, writeStored } from './storage'
+import { ANIMATIONS, enabledAnimations } from './animations'
 
 const VIEW_TITLES = {
   dashboard: 'Accueil',
@@ -83,14 +85,32 @@ async function checkHealth() {
   }
 }
 
+// Menu des animations : se ferme au clic a l'exterieur et avec Echap
+const animMenuOpen = ref(false)
+const animMenuEl = ref(null)
+
+function closeAnimMenuOnOutsideClick(event) {
+  if (animMenuOpen.value && animMenuEl.value && !animMenuEl.value.contains(event.target)) {
+    animMenuOpen.value = false
+  }
+}
+
+function closeAnimMenuOnEscape(event) {
+  if (event.key === 'Escape') animMenuOpen.value = false
+}
+
 onMounted(() => {
   window.addEventListener('hashchange', onHashChange)
+  document.addEventListener('click', closeAnimMenuOnOutsideClick)
+  document.addEventListener('keydown', closeAnimMenuOnEscape)
   checkHealth()
   healthTimer = setInterval(checkHealth, 30000)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('hashchange', onHashChange)
+  document.removeEventListener('click', closeAnimMenuOnOutsideClick)
+  document.removeEventListener('keydown', closeAnimMenuOnEscape)
   clearInterval(healthTimer)
 })
 </script>
@@ -270,22 +290,7 @@ onBeforeUnmount(() => {
     </aside>
 
     <div class="main-area">
-      <!-- décor spatial sombre -->
-      <div class="space-bg">
-        <div class="sky-nebula sky-nebula-a"></div>
-        <div class="sky-nebula sky-nebula-b"></div>
-        <div class="sky-grid"></div>
-        <div class="sky-stars sky-stars-1"></div>
-        <div class="sky-stars sky-stars-2"></div>
-        <div class="sky-shooting"></div>
-        <div class="sky-system">
-          <div class="sky-sun"></div>
-          <div class="sky-orbit sky-orbit-1"><span class="sky-planet sky-planet-1"></span></div>
-          <div class="sky-orbit sky-orbit-2"><span class="sky-planet sky-planet-2"></span></div>
-          <div class="sky-orbit sky-orbit-3"><span class="sky-planet sky-planet-3"></span></div>
-        </div>
-        <div class="sky-vignette"></div>
-      </div>
+      <SpaceBackground />
 
       <div class="main-topbar">
         <button
@@ -307,14 +312,35 @@ onBeforeUnmount(() => {
           <span :class="['topbar-dot', `topbar-dot-${apiStatus}`]"></span>
           <span class="topbar-status-text">{{ STATUS_LABELS[apiStatus] }}</span>
         </span>
-        <button
-          type="button"
-          class="topbar-motion"
-          :aria-pressed="!motionEnabled"
-          @click="motionEnabled = !motionEnabled"
-        >
-          Réduire les animations
-        </button>
+        <div ref="animMenuEl" class="anim-menu">
+          <!-- Le libelle dit l'etat actuel : avec un texte fixe, rien n'indiquait
+               que les animations (et les vaisseaux) etaient coupees -->
+          <button
+            type="button"
+            class="topbar-motion"
+            :aria-expanded="animMenuOpen"
+            aria-controls="anim-panel"
+            @click="animMenuOpen = !animMenuOpen"
+          >
+            {{ motionEnabled ? 'Animations : activées' : 'Animations : coupées' }}
+            <span aria-hidden="true">▾</span>
+          </button>
+          <div v-if="animMenuOpen" id="anim-panel" class="anim-panel" role="group" aria-label="Choix des animations">
+            <label class="anim-option anim-option-master">
+              <input v-model="motionEnabled" type="checkbox" />
+              Toutes les animations
+            </label>
+            <p class="anim-panel-title">Créatures du fond</p>
+            <label v-for="animation in ANIMATIONS" :key="animation.key" class="anim-option">
+              <input
+                v-model="enabledAnimations[animation.key]"
+                type="checkbox"
+                :disabled="!motionEnabled"
+              />
+              {{ animation.label }}
+            </label>
+          </div>
+        </div>
       </div>
       <main ref="mainEl" tabindex="-1">
         <Dashboard v-if="currentView === 'dashboard'" @navigate="currentView = $event" />
@@ -636,198 +662,6 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 
-.space-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 70% -10%, #171a2e 0%, transparent 60%),
-    radial-gradient(ellipse 70% 50% at 10% 110%, #141b2c 0%, transparent 60%),
-    var(--bg-base);
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.sky-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, #000 0%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, #000 0%, transparent 75%);
-}
-
-.sky-vignette {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 40%, rgba(5, 6, 10, 0.75) 100%);
-}
-
-.sky-nebula {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.4;
-}
-
-.sky-nebula-a {
-  width: 620px;
-  height: 620px;
-  top: -200px;
-  right: 6%;
-  background: radial-gradient(circle, rgba(124, 108, 245, 0.55) 0%, transparent 70%);
-  animation: sky-drift-a 30s ease-in-out infinite;
-}
-
-.sky-nebula-b {
-  width: 680px;
-  height: 680px;
-  bottom: -260px;
-  left: 2%;
-  background: radial-gradient(circle, rgba(79, 156, 249, 0.42) 0%, transparent 70%);
-  animation: sky-drift-b 36s ease-in-out infinite;
-}
-
-@keyframes sky-drift-a {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(-34px, 26px); }
-}
-
-@keyframes sky-drift-b {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(32px, -22px); }
-}
-
-.sky-stars {
-  position: absolute;
-  inset: 0;
-  background-repeat: repeat;
-}
-
-.sky-stars-1 {
-  background-image:
-    radial-gradient(1px 1px at 40px 60px, rgba(220, 228, 255, 0.85), transparent),
-    radial-gradient(1px 1px at 160px 120px, rgba(190, 180, 255, 0.7), transparent),
-    radial-gradient(1px 1px at 260px 40px, rgba(220, 228, 255, 0.8), transparent),
-    radial-gradient(1px 1px at 90px 220px, rgba(200, 215, 255, 0.65), transparent),
-    radial-gradient(1px 1px at 320px 180px, rgba(220, 228, 255, 0.8), transparent);
-  background-size: 360px 300px;
-  animation: sky-twinkle 5s ease-in-out infinite;
-}
-
-.sky-stars-2 {
-  background-image:
-    radial-gradient(1.6px 1.6px at 120px 90px, rgba(190, 180, 255, 0.75), transparent),
-    radial-gradient(1.6px 1.6px at 300px 240px, rgba(220, 228, 255, 0.6), transparent),
-    radial-gradient(1.6px 1.6px at 420px 140px, rgba(200, 215, 255, 0.6), transparent);
-  background-size: 480px 360px;
-  animation: sky-twinkle 7s ease-in-out infinite 1.5s;
-}
-
-@keyframes sky-twinkle {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 0.85; }
-}
-
-.sky-shooting {
-  position: absolute;
-  top: 12%;
-  left: -140px;
-  width: 120px;
-  height: 1.5px;
-  background: linear-gradient(90deg, rgba(160, 190, 255, 0), rgba(190, 210, 255, 0.95));
-  border-radius: 2px;
-  opacity: 0;
-  animation: sky-shoot 9s ease-in infinite 2s;
-}
-
-@keyframes sky-shoot {
-  0% { opacity: 0; transform: translate(0, 0) rotate(24deg); }
-  4% { opacity: 0.9; }
-  16% { opacity: 0.9; }
-  26% { opacity: 0; transform: translate(60vw, 34vh) rotate(24deg); }
-  100% { opacity: 0; transform: translate(60vw, 34vh) rotate(24deg); }
-}
-
-.sky-system {
-  position: absolute;
-  top: 46%;
-  left: 52%;
-  width: 0;
-  height: 0;
-}
-
-.sky-sun {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 30px;
-  height: 30px;
-  margin: -16px 0 0 -16px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #fff0c4, #ffc65c 60%, #ff9d3d 90%);
-  opacity: 0.5;
-  box-shadow: 0 0 40px 14px rgba(255, 180, 90, 0.22);
-  animation: sky-sun-pulse 6s ease-in-out infinite;
-}
-
-@keyframes sky-sun-pulse {
-  0%, 100% { opacity: 0.42; }
-  50% { opacity: 0.62; }
-}
-
-.sky-orbit {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border: 1px solid rgba(180, 190, 255, 0.07);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.sky-orbit-1 { width: 280px; height: 280px; animation: sky-spin 22s linear infinite; }
-.sky-orbit-2 { width: 480px; height: 480px; animation: sky-spin 38s linear infinite; }
-.sky-orbit-3 { width: 720px; height: 720px; animation: sky-spin 64s linear infinite; }
-
-@keyframes sky-spin {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-.sky-planet {
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  opacity: 0.7;
-}
-
-.sky-planet-1 {
-  width: 11px;
-  height: 11px;
-  background: radial-gradient(circle at 35% 30%, #ffd6a8, #c97a42);
-  box-shadow: 0 0 12px rgba(255, 190, 140, 0.5);
-}
-
-.sky-planet-2 {
-  width: 15px;
-  height: 15px;
-  top: -7.5px;
-  background: radial-gradient(circle at 35% 30%, #bcdcff, #4f8fd6);
-  box-shadow: 0 0 14px rgba(120, 180, 255, 0.5);
-}
-
-.sky-planet-3 {
-  width: 13px;
-  height: 13px;
-  top: -6.5px;
-  background: radial-gradient(circle at 35% 30%, #d8c8ff, #7c6cf5);
-  box-shadow: 0 0 14px rgba(140, 120, 255, 0.55);
-}
-
 /* ---------- topbar ---------- */
 .main-topbar {
   display: flex;
@@ -837,7 +671,7 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(10, 11, 16, 0.72);
+  background: rgba(5, 5, 7, 0.72);
   border-bottom: 1px solid var(--border);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
@@ -894,8 +728,12 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 8px var(--danger);
 }
 
-.topbar-motion {
+.anim-menu {
+  position: relative;
   margin-left: auto;
+}
+
+.topbar-motion {
   padding: 6px 12px;
   background: var(--glass-1);
   border: 1px solid var(--border);
@@ -911,10 +749,71 @@ onBeforeUnmount(() => {
   color: var(--text);
 }
 
-.topbar-motion[aria-pressed='true'] {
+.topbar-motion[aria-expanded='true'] {
   background: var(--accent-soft);
   border-color: var(--accent-line);
   color: var(--text);
+}
+
+.anim-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+  padding: 10px;
+  background: #10121c;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-3);
+}
+
+.anim-panel-title {
+  margin: 8px 8px 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* toute la ligne est cliquable, pas seulement la petite case */
+.anim-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.anim-option:hover {
+  background: var(--glass-2);
+}
+
+.anim-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.anim-option:has(input:disabled) {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.anim-option-master {
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding-bottom: 8px;
 }
 
 @keyframes pulse-dot {

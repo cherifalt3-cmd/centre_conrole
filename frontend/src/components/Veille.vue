@@ -358,7 +358,7 @@ function formatDate(iso) {
   gap: 8px;
   padding: 8px 16px;
   background: var(--accent-soft);
-  color: var(--accent-text);
+  color: var(--text);
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-sm);
   font-weight: 500;
@@ -535,9 +535,9 @@ function formatDate(iso) {
 }
 
 .badge-ai {
-  background: var(--accent-soft);
+  background: var(--accent-tint);
   border-color: var(--accent-line);
-  color: #a396ff;
+  color: var(--accent-text);
 }
 
 .severity-badge {
@@ -634,7 +634,7 @@ function formatDate(iso) {
 .summarize-btn:hover:not(:disabled) {
   background: var(--accent-soft);
   border-color: var(--accent-line);
-  color: var(--accent-text);
+  color: var(--text);
 }
 
 .summarize-btn:disabled {
@@ -662,7 +662,7 @@ function formatDate(iso) {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--accent-text);
-  background: var(--accent-soft);
+  background: var(--accent-tint);
   border: 1px solid var(--accent-line);
   border-radius: 999px;
   padding: 2px 10px;
